@@ -5,6 +5,7 @@ import Index from './pages/Index';
 import DispatchPage from './pages/DispatchPage';
 import ReallocationPage from './pages/ReallocationPage';
 import StockPage from './pages/StockPage';
+import AdminPage from './pages/AdminPage';
 import NotFound from './pages/NotFound';
 
 const App = () => (
@@ -17,6 +18,7 @@ const App = () => (
           <Route path="stock" element={<StockPage />} />
           <Route path="dispatch" element={<DispatchPage />} />
           <Route path="reallocation" element={<ReallocationPage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
