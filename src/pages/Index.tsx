@@ -137,39 +137,35 @@ const IndexPage: React.FC = () => {
 
   return (
     <DashboardContext.Provider value={contextValue}>
-      <div className="min-h-screen w-full overflow-x-hidden bg-slate-50">
-        <div className="mx-auto w-full max-w-screen-2xl px-3 py-6 sm:px-4 lg:px-8">
-          <div
-            className="grid min-h-[calc(100vh-3rem)] gap-4 lg:gap-6"
-            style={{ gridTemplateColumns: `${sidebarColumn} 1fr` }}
-          >
-            <WorkspaceSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
+      <div className="min-h-screen w-full overflow-hidden bg-slate-50">
+        <div
+          className="grid min-h-screen w-full gap-3 px-3 py-4 sm:gap-4 sm:px-4 sm:py-6 lg:gap-6 lg:px-6"
+          style={{ gridTemplateColumns: `${sidebarColumn} 1fr` }}
+        >
+          <WorkspaceSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
 
-            <main className="space-y-6 overflow-hidden">
-              <Card className="border-border/80 shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <CardTitle className="text-2xl md:text-3xl">Dispatch Workspace</CardTitle>
-                      <CardDescription>
-                        Stock sheet, dispatch data, and reallocation insights in one place.
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                        Live subscription
-                      </div>
-                      {loading && <span className="text-xs">Syncing...</span>}
-                    </div>
+          <main className="flex min-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
+            <CardHeader className="border-b border-border/70 pb-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle className="text-2xl md:text-3xl">Dispatch Workspace</CardTitle>
+                  <CardDescription>
+                    Stock sheet, dispatch data, and reallocation insights in one place.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Live subscription
                   </div>
-                </CardHeader>
-                <CardContent className="overflow-x-auto">
-                  <Outlet />
-                </CardContent>
-              </Card>
-            </main>
-          </div>
+                  {loading && <span className="text-xs">Syncing...</span>}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-auto px-4 pb-4">
+              <Outlet />
+            </CardContent>
+          </main>
         </div>
       </div>
     </DashboardContext.Provider>
