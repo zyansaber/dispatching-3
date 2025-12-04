@@ -30,11 +30,13 @@ interface WorkspaceSidebarProps {
 }
 
 const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, onToggle }) => {
+  const asideWidth = collapsed ? "w-[72px]" : "w-[270px] lg:w-[300px]";
+
   return (
     <aside
-      className={`relative flex h-full min-h-[560px] flex-col gap-3 rounded-xl border border-border/70 bg-background/90 p-3 shadow-sm backdrop-blur transition-[width] ${
-        collapsed ? "w-16" : "w-[270px] lg:w-[300px]"
-      }`}
+      className={`relative flex h-full min-h-[560px] flex-col gap-3 rounded-xl border border-border/70 bg-background/90 ${
+        collapsed ? "p-2" : "p-3"
+      } shadow-sm backdrop-blur transition-[width] ${asideWidth}`}
     >
       <div className="flex items-center justify-between gap-2">
         {!collapsed && <CardTitle className="text-base">Workspace</CardTitle>}
@@ -50,10 +52,15 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
       </div>
 
       <Card className="border-border/80 shadow-sm">
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
+        <CardHeader
+          className={`pb-3 ${
+            collapsed ? "flex flex-col items-center space-y-2" : "flex flex-row items-start justify-between space-y-0"
+          }`}
+        >
+          <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
               DW
+              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
             </div>
             {!collapsed && (
               <div>
@@ -77,13 +84,23 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  `group relative flex w-full items-center gap-2 rounded-md border text-sm transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     isActive ? "border-primary/60 bg-primary/10 text-primary" : "border-border/80 bg-background text-foreground"
-                  } ${collapsed ? "justify-center" : "justify-start"}`
+                  } ${
+                    collapsed
+                      ? "h-12 justify-center px-2"
+                      : "h-11 justify-start px-3"
+                  }`
                 }
                 end
+                aria-label={item.label}
               >
-                <Icon className="h-4 w-4" />
+                <span
+                  className={`absolute left-1 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-primary transition ${
+                    collapsed ? "" : "left-2"
+                  } ${isActive ? "opacity-100" : "opacity-0"}`}
+                />
+                <Icon className="h-4 w-4" aria-hidden />
                 {!collapsed && item.label}
               </NavLink>
             );
