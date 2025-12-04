@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, NavLink } from "react-router-dom";
 import {
   fetchDispatchData,
   fetchDispatchingNoteData,
@@ -23,9 +23,8 @@ import {
   ProcessedReallocationEntry,
 } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard, ClipboardList, ArrowLeftRight } from "lucide-react";
+import { LayoutDashboard, ClipboardList, ArrowLeftRight, type LucideIcon } from "lucide-react";
 
 interface DashboardContextValue {
   dispatchRaw: DispatchData;
@@ -44,6 +43,62 @@ interface DashboardContextValue {
 }
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
+
+type NavItem = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+const navItems: NavItem[] = [
+  { to: "/stock", label: "Stock Sheet", icon: ClipboardList },
+  { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard },
+  { to: "/reallocation", label: "Reallocation", icon: ArrowLeftRight },
+];
+
+const WorkspaceSidebar: React.FC = () => (
+  <aside className="space-y-4">
+    <Card className="border-border/80 shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
+            DW
+          </div>
+          <div>
+            <CardTitle className="text-lg">Dispatch Workspace</CardTitle>
+            <CardDescription>Realtime stock & dispatch monitor</CardDescription>
+          </div>
+        </div>
+        <Badge variant="secondary" className="gap-2 px-2.5 py-1 text-[11px]">
+          <span className="h-2 w-2 rounded-full bg-green-500" />
+          Live
+        </Badge>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  isActive
+                    ? "border-primary/60 bg-primary/10 text-primary"
+                    : "border-border/80 bg-background text-foreground"
+                }`
+              }
+              end
+            >
+              <Icon className="h-4 w-4" />
+              {item.label}
+            </NavLink>
+          );
+        })}
+      </CardContent>
+    </Card>
+  </aside>
+);
 
 export const useDashboardContext = () => {
   const ctx = useContext(DashboardContext);
@@ -121,15 +176,6 @@ const IndexPage: React.FC = () => {
     await deleteDispatchingNote(clean);
   };
 
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const navItems = [
-    { to: "/stock", label: "Stock Sheet", icon: ClipboardList },
-    { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard },
-    { to: "/reallocation", label: "Reallocation", icon: ArrowLeftRight },
-  ];
-
   const contextValue: DashboardContextValue = {
     dispatchRaw,
     reallocRaw,
@@ -148,42 +194,7 @@ const IndexPage: React.FC = () => {
       <div className="min-h-screen bg-slate-50">
         <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-[260px_1fr] xl:grid-cols-[300px_1fr]">
-            <aside className="space-y-4">
-              <Card className="border-border/80 shadow-sm">
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
-                      DW
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Dispatch Workspace</CardTitle>
-                      <CardDescription>Realtime stock & dispatch monitor</CardDescription>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="gap-2 px-2.5 py-1 text-[11px]">
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
-                    Live
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.to;
-                    return (
-                      <Button
-                        key={item.to}
-                        variant={isActive ? "default" : "secondary"}
-                        className="w-full justify-start gap-2"
-                        onClick={() => navigate(item.to)}
-                      >
-                        <Icon className="h-4 w-4" />
-                        {item.label}
-                      </Button>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            </aside>
+            <WorkspaceSidebar />
 
             <main className="space-y-6">
               <Card className="border-border/80 shadow-sm">
