@@ -95,13 +95,17 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
                 end
                 aria-label={item.label}
               >
-                <span
-                  className={`absolute left-1 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-primary transition ${
-                    collapsed ? "" : "left-2"
-                  } ${isActive ? "opacity-100" : "opacity-0"}`}
-                />
-                <Icon className="h-4 w-4" aria-hidden />
-                {!collapsed && item.label}
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={`absolute left-1 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-primary transition ${
+                        collapsed ? "" : "left-2"
+                      } ${isActive ? "opacity-100" : "opacity-0"}`}
+                    />
+                    <Icon className="h-4 w-4" aria-hidden />
+                    {!collapsed && item.label}
+                  </>
+                )}
               </NavLink>
             );
 
