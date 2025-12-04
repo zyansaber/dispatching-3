@@ -1,5 +1,8 @@
++81
+-196
+
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import {
   fetchDispatchData,
   fetchDispatchingNoteData,
@@ -22,9 +25,8 @@ import {
   ProcessedDispatchEntry,
   ProcessedReallocationEntry,
 } from "@/types";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard, ClipboardList, ArrowLeftRight, type LucideIcon } from "lucide-react";
+import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 
 interface DashboardContextValue {
   dispatchRaw: DispatchData;
@@ -44,62 +46,6 @@ interface DashboardContextValue {
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
 
-type NavItem = {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-};
-
-const navItems: NavItem[] = [
-  { to: "/stock", label: "Stock Sheet", icon: ClipboardList },
-  { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard },
-  { to: "/reallocation", label: "Reallocation", icon: ArrowLeftRight },
-];
-
-const WorkspaceSidebar: React.FC = () => (
-  <aside className="space-y-4">
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
-            DW
-          </div>
-          <div>
-            <CardTitle className="text-lg">Dispatch Workspace</CardTitle>
-            <CardDescription>Realtime stock & dispatch monitor</CardDescription>
-          </div>
-        </div>
-        <Badge variant="secondary" className="gap-2 px-2.5 py-1 text-[11px]">
-          <span className="h-2 w-2 rounded-full bg-green-500" />
-          Live
-        </Badge>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex w-full items-center gap-2 rounded-md border px-3 py-2 text-sm transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  isActive
-                    ? "border-primary/60 bg-primary/10 text-primary"
-                    : "border-border/80 bg-background text-foreground"
-                }`
-              }
-              end
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </NavLink>
-          );
-        })}
-      </CardContent>
-    </Card>
-  </aside>
-);
-
 export const useDashboardContext = () => {
   const ctx = useContext(DashboardContext);
   if (!ctx) throw new Error("Dashboard context is not available");
@@ -116,6 +62,7 @@ const IndexPage: React.FC = () => {
   const [reallocProcessed, setReallocProcessed] = useState<ProcessedReallocationEntry[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
   const stats = useMemo(() => getDispatchStats(dispatchRaw, reallocRaw), [dispatchRaw, reallocRaw]);
 
@@ -189,20 +136,27 @@ const IndexPage: React.FC = () => {
     handleDeleteDispatchingNote,
   };
 
+  const sidebarColumn = sidebarCollapsed ? "72px" : "300px";
+
   return (
     <DashboardContext.Provider value={contextValue}>
-      <div className="min-h-screen bg-slate-50">
-        <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
-          <div className="grid gap-6 lg:grid-cols-[260px_1fr] xl:grid-cols-[300px_1fr]">
-            <WorkspaceSidebar />
+      <div className="min-h-screen w-full overflow-x-hidden bg-slate-50">
+        <div className="mx-auto w-full max-w-screen-2xl px-3 py-6 sm:px-4 lg:px-8">
+          <div
+            className="grid min-h-[calc(100vh-3rem)] gap-4 lg:gap-6"
+            style={{ gridTemplateColumns: `${sidebarColumn} 1fr` }}
+          >
+            <WorkspaceSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
 
-            <main className="space-y-6">
+            <main className="space-y-6 overflow-hidden">
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="pb-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <CardTitle className="text-2xl md:text-3xl">Dispatch Workspace</CardTitle>
-                      <CardDescription>Stock sheet, dispatch data, and reallocation insights in one place.</CardDescription>
+                      <CardDescription>
+                        Stock sheet, dispatch data, and reallocation insights in one place.
+                      </CardDescription>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
@@ -213,7 +167,7 @@ const IndexPage: React.FC = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                   <Outlet />
                 </CardContent>
               </Card>
