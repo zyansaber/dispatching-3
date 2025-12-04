@@ -86,6 +86,12 @@ const IndexPage: React.FC = () => {
 
       unsubDispatch = subscribeDispatch((d) => setDispatchRaw(d || {}));
       unsubRealloc = subscribeReallocation((r) => setReallocRaw(r || {}));
+      unsubNote = subscribeDispatchingNote((n) => setDispatchingNote(n || {}));
+    })();
+
+    return () => {
+      unsubDispatch && unsubDispatch();
+      unsubRealloc && unsubRealloc();
       unsubNote && unsubNote();
     };
   }, []);
