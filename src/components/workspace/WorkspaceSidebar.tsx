@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   PanelLeft,
   PanelRight,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +23,7 @@ const navItems: WorkspaceNavItem[] = [
   { to: "/stock", label: "Stock Sheet", icon: ClipboardList },
   { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard },
   { to: "/reallocation", label: "Reallocation", icon: ArrowLeftRight },
+  { to: "/admin", label: "Admin", icon: Settings },
 ];
 
 interface WorkspaceSidebarProps {
