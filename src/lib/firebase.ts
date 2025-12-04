@@ -18,6 +18,8 @@ import {
   ProcessedDispatchEntry,
   DispatchingNoteData,
   DispatchingNoteEntry,
+  TransportConfig,
+  TransportCompany,
 } from "@/types";
 
 // -------------------- Firebase 初始化 --------------------
@@ -48,6 +50,13 @@ export function dispatchRef(chassisNo: string) {
 // /dispatchingnote/<Chassis No> 的引用
 export function dispatchingNoteRef(chassisNo: string) {
   return ref(db, `dispatchingnote/${escapeKey(chassisNo)}`);
+}
+
+// /transportCompanies/<id> 的引用
+export function transportCompanyRef(companyId?: string | null) {
+  return companyId
+    ? ref(db, `transportCompanies/${escapeKey(companyId)}`)
+    : ref(db, "transportCompanies");
 }
 
 // 按底盘号进行“局部更新”
@@ -134,6 +143,16 @@ export const fetchDispatchingNoteData = async (): Promise<DispatchingNoteData> =
   }
 };
 
+export const fetchTransportCompanies = async (): Promise<TransportConfig> => {
+  try {
+    const snapshot = await get(ref(db, "transportCompanies"));
+    return snapshot.val() || {};
+  } catch (error) {
+    console.error("Error fetching transport companies:", error);
+    return {};
+  }
+};
+
 // -------------------- 实时订阅 --------------------
 export function subscribeDispatch(onChange: (data: DispatchData) => void) {
   const r = ref(db, "Dispatch");
@@ -158,6 +177,33 @@ export function subscribeDispatchingNote(
   );
   return () => off(r, "value", cb);
 }
+
+export function subscribeTransportCompanies(
+  onChange: (data: TransportConfig) => void
+) {
+  const r = ref(db, "transportCompanies");
+  const cb = onValue(r, (snap) => onChange((snap.val() || {}) as TransportConfig));
+  return () => off(r, "value", cb);
+}
+
+export const upsertTransportCompany = async (
+  companyId: string | null,
+  data: Partial<TransportCompany>
+): Promise<string> => {
+  const targetRef = companyId
+    ? transportCompanyRef(companyId)
+    : push(transportCompanyRef());
+  await update(targetRef, {
+    ...data,
+    updatedAt: new Date().toISOString(),
+    createdAt: companyId ? undefined : new Date().toISOString(),
+  });
+  return targetRef.key || "";
+};
+
+export const deleteTransportCompany = async (companyId: string) => {
+  await remove(transportCompanyRef(companyId));
+};
 
 // -------------------- 业务辅助 --------------------
 export const reportError = async (
