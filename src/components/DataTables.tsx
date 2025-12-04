@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowUpDown, AlertTriangle, Mail, Download } from "lucide-react";
-import { ProcessedDispatchEntry, ProcessedReallocationEntry } from "@/types";
+import { ProcessedDispatchEntry, ProcessedReallocationEntry, TransportConfig } from "@/types";
 import { getGRDaysColor, getGRDaysWidth, reportError, patchDispatch } from "@/lib/firebase";
 import { toast } from "sonner";
 
@@ -26,8 +26,8 @@ const COLS = [
   { key: "SAP Data",         w: 170 },
   { key: "Scheduled Dealer", w: 170 },
   { key: "Matched PO No",    w: 170 },
-  { key: "Code",             w: 120 },
-  { key: "On Hold",          w: 110 },
+  { key: "Transport",        w: 180 },
+  { key: "Status",           w: 110 },
 ];
 
 // 邮件（可选）
@@ -93,10 +93,11 @@ interface DispatchTableProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   reallocationData: ProcessedReallocationEntry[];
+  transportCompanies?: TransportConfig;
 }
 
 export const DispatchTable: React.FC<DispatchTableProps> = ({
-  allData, activeFilter = "all", searchTerm, onSearchChange, reallocationData
+  allData, activeFilter = "all", searchTerm, onSearchChange, reallocationData, transportCompanies = {}
 }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc'; } | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
@@ -165,7 +166,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           safeIncludes(d["Matched PO No"], s) ||
           safeIncludes(d["SAP Data"], s) ||
           safeIncludes(d["Scheduled Dealer"], s) ||
-          safeIncludes(d.Code, s) ||
+          safeIncludes(d.TransportCompany, s) ||
+          safeIncludes(d.TransportDealer, s) ||
           safeIncludes(d.Statuscheck, s) ||
           safeIncludes(d.DealerCheck, s) ||
           safeIncludes(d.reallocatedTo, s) ||
@@ -270,6 +272,39 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     }
   };
 
+  const handleSaveTransport = async (
+    row: ProcessedDispatchEntry,
+    company: string | null,
+    dealer?: string | null
+  ) => {
+    const id = row["Chassis No"];
+    const patch: Partial<ProcessedDispatchEntry> = {
+      TransportCompany: company,
+      TransportDealer: dealer === undefined ? row.TransportDealer || null : dealer,
+    };
+    // Reset dealer if company changed
+    if (company !== row.TransportCompany) {
+      patch.TransportDealer = null;
+    }
+
+    applyOptimistic(id, patch);
+    setSaving((s) => ({ ...s, [id]: true }));
+    setError((e) => ({ ...e, [id]: undefined }));
+    try {
+      await patchDispatch(id, patch);
+    } catch (err: any) {
+      setOptimistic((m) => {
+        const prev = { ...(m[id] || {}) };
+        delete prev.TransportCompany;
+        delete prev.TransportDealer;
+        return { ...m, [id]: prev };
+      });
+      setError((e) => ({ ...e, [id]: err?.message || "Update failed" }));
+    } finally {
+      setSaving((s) => ({ ...s, [id]: false }));
+    }
+  };
+
   const handleReportError = async (chassisNo: string) => {
     const entry = baseMerged.find(e => e["Chassis No"] === chassisNo);
     if (!entry) return;
@@ -327,7 +362,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     "SAP Data": e["SAP Data"] ?? "",
     "Scheduled Dealer": e["Scheduled Dealer"] ?? "",
     "Matched PO No": e["Matched PO No"] ?? "",
-    Code: e.Code ?? "",
+    "Transport Company": e.TransportCompany ?? "",
+    "Transport Dealer": e.TransportDealer ?? "",
     "On Hold": e.OnHold ? "Yes" : "No",
     Status: e.Statuscheck ?? "",
     Dealer: e.DealerCheck ?? "",
@@ -335,6 +371,16 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     Comment: e.Comment ?? "",
     "Estimated Pickup At": e.EstimatedPickupAt ?? "",
   });
+
+  const transportOptions = useMemo(() =>
+    Object.values(transportCompanies || {}).map((c) => ({
+      name: c.name,
+      dealers: c.dealers || [],
+    })),
+  [transportCompanies]);
+
+  const findCompanyByName = (name?: string | null) =>
+    transportOptions.find((c) => c.name === name);
 
   const loadXLSX = (): Promise<any> => new Promise((resolve, reject) => {
     if (window.XLSX) return resolve(window.XLSX);
@@ -402,8 +448,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>SAP Data</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Scheduled Dealer</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Matched PO No</TableCell>
-      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Code</TableCell>
-      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 text-center ${CELL_VDIV}`}>On Hold</TableCell>
+      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Transport</TableCell>
+      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 text-center ${CELL_VDIV}`}>Status</TableCell>
     </TableRow>
   );
 
@@ -452,9 +498,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   <SortableHeader sortKey="SAP Data">SAP Data</SortableHeader>
                   <SortableHeader sortKey="Scheduled Dealer">Scheduled Dealer</SortableHeader>
                   <SortableHeader sortKey="Matched PO No">Matched PO No</SortableHeader>
-                  <SortableHeader sortKey="Code">Code</SortableHeader>
+                  <SortableHeader sortKey="TransportCompany">Transport</SortableHeader>
                   <TableHead className={`text-center align-top pt-3 font-medium text-slate-800 ${CELL_VDIV}`}>
-                    On Hold
+                    Status
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -502,16 +548,46 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["SAP Data"] || ""}>{entry["SAP Data"] || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Scheduled Dealer"] || ""}>{entry["Scheduled Dealer"] || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Matched PO No"] || ""}>{entry["Matched PO No"] || "-"}</TableCell>
-                        <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry.Code || ""}>{entry.Code || "-"}</TableCell>
+                        <TableCell className={`${CELL} ${CELL_VDIV}`}>
+                          <div className="flex flex-col gap-2">
+                            <select
+                              className="w-full rounded border px-2 py-1 text-sm"
+                              value={entry.TransportCompany || ""}
+                              onChange={(e) => handleSaveTransport(entry, e.target.value || null)}
+                            >
+                              <option value="">Select company</option>
+                              {transportOptions.map((c) => (
+                                <option key={c.name} value={c.name}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+
+                            {findCompanyByName(entry.TransportCompany)?.dealers?.length ? (
+                              <select
+                                className="w-full rounded border px-2 py-1 text-sm"
+                                value={entry.TransportDealer || ""}
+                                onChange={(e) => handleSaveTransport(entry, entry.TransportCompany || null, e.target.value || null)}
+                              >
+                                <option value="">Select dealer</option>
+                                {findCompanyByName(entry.TransportCompany)?.dealers?.map((d) => (
+                                  <option key={d} value={d}>
+                                    {d}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : null}
+                          </div>
+                        </TableCell>
 
                         <TableCell className={`${CELL_VDIV} text-center`}>
                           <Button
                             size="sm"
-                            className={entry.OnHold ? "bg-red-600 text-white" : "bg-amber-500 text-white"}
+                            className={entry.OnHold ? "bg-red-600 text-white" : "bg-emerald-600 text-white"}
                             disabled={saving[id]}
                             onClick={() => handleToggleOnHold(entry, !entry.OnHold)}
                           >
-                            {entry.OnHold ? "Cancel" : "On Hold"}
+                            {entry.OnHold ? "On Hold" : "Ready"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -681,18 +757,19 @@ const OnHoldBoard: React.FC<{
                   <div className="font-medium text-sm text-slate-900 break-all">{id}</div>
                   <Button
                     size="sm"
-                    className="bg-red-600 text-white"
+                    className="bg-emerald-600 text-white"
                     disabled={saving[id]}
                     onClick={() => handlers.handleToggleOnHold(row, false)}
                   >
-                    Cancel
+                    Ready
                   </Button>
                 </div>
 
                 <div className="mt-2 text-sm space-y-1.5 flex-1">
                   <div className={CELL}><span className="text-slate-500">Customer：</span>{row.Customer || "-"}</div>
                   <div className={CELL}><span className="text-slate-500">Model：</span>{row.Model || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Code：</span>{row.Code || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Transport：</span>{row.TransportCompany || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Dealer：</span>{row.TransportDealer || "-"}</div>
                   <div className={CELL}><span className="text-slate-500">Matched PO：</span>{row["Matched PO No"] || "-"}</div>
                 </div>
 
