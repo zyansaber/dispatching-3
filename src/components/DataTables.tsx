@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown, AlertTriangle, Mail, Download } from "lucide-react";
+import { ArrowUpDown, AlertTriangle, Mail, Download, RotateCw } from "lucide-react";
 import { ProcessedDispatchEntry, ProcessedReallocationEntry, TransportConfig } from "@/types";
 import { getGRDaysColor, getGRDaysWidth, reportError, patchDispatch } from "@/lib/firebase";
 import { toast } from "sonner";
@@ -50,11 +50,12 @@ interface DispatchStatsProps {
   onFilterChange: (filter: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold') => void;
   activeFilter?: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold';
   onRefresh: () => void;
+  refreshing?: boolean;
 }
 
 export const DispatchStats: React.FC<DispatchStatsProps> = ({
   total, invalidStock, snowyStock, canBeDispatched, onHold,
-  onFilterChange, activeFilter = "all"
+  onFilterChange, activeFilter = "all", onRefresh, refreshing = false,
 }) => {
   const cards = [
     { label: "Total", value: total, filter: "all" },
@@ -66,21 +67,28 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 
   return (
     <div className="space-y-4 w-full max-w-full overflow-x-hidden">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {cards.map((card) => (
-          <Card
-            key={card.filter}
-            className={`cursor-pointer transition hover:shadow-sm ${activeFilter === card.filter ? "ring-2 ring-blue-500" : ""}`}
-            onClick={() => onFilterChange(card.filter as any)}
-          >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-[13px] font-medium text-slate-600 truncate">{card.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+          {cards.map((card) => (
+            <Card
+              key={card.filter}
+              className={`cursor-pointer transition hover:shadow-sm ${activeFilter === card.filter ? "ring-2 ring-blue-500" : ""}`}
+              onClick={() => onFilterChange(card.filter as any)}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[13px] font-medium text-slate-600 truncate">{card.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onRefresh} disabled={refreshing}>
+          <RotateCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Refreshing..." : "Refresh"}
+        </Button>
       </div>
     </div>
   );
