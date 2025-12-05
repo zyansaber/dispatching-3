@@ -7,7 +7,14 @@ import { Sparkles } from "lucide-react";
 import { useDashboardContext } from "./Index";
 
 const DispatchPage: React.FC = () => {
-  const { dispatchProcessed, reallocProcessed, stats } = useDashboardContext();
+  const {
+    dispatchProcessed,
+    reallocProcessed,
+    stats,
+    transportCompanies,
+    handleRefreshData,
+    refreshing,
+  } = useDashboardContext();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "invalid" | "snowy" | "canBeDispatched" | "onHold">(
     "all"
@@ -32,7 +39,8 @@ const DispatchPage: React.FC = () => {
         onHold={stats.onHold}
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
-        onRefresh={() => {}}
+        onRefresh={handleRefreshData}
+        refreshing={refreshing}
       />
 
       <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
@@ -59,6 +67,7 @@ const DispatchPage: React.FC = () => {
         searchTerm={search}
         onSearchChange={setSearch}
         reallocationData={reallocProcessed}
+        transportCompanies={transportCompanies}
       />
     </div>
   );
