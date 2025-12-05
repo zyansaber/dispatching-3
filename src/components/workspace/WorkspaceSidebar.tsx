@@ -37,6 +37,9 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
   return (
     <aside
       className={`relative sticky top-4 self-start min-h-[560px] flex flex-col gap-3 rounded-xl border border-border/70 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-100 shadow-sm transition-[width] sm:top-6 ${padding} ${asideWidth}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        {!collapsed && <CardTitle className="text-base font-semibold tracking-tight">Workspace</CardTitle>}
         <Button
           size="icon"
           variant="secondary"
