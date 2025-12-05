@@ -1,6 +1,9 @@
++3
+-3
+
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 import DispatchPage from './pages/DispatchPage';
 import ReallocationPage from './pages/ReallocationPage';
@@ -11,7 +14,7 @@ import NotFound from './pages/NotFound';
 const App = () => (
   <TooltipProvider>
     <Toaster />
-    <HashRouter>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Index />}>
           <Route index element={<Navigate to="/stock" replace />} />
@@ -22,7 +25,7 @@ const App = () => (
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   </TooltipProvider>
 );
 
