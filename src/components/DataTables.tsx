@@ -150,7 +150,13 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     if (activeFilter === "invalid")   arr = arr.filter(e => e.Statuscheck !== "OK");
     if (activeFilter === "onHold")    arr = arr.filter(e => e.OnHold === true);
     if (activeFilter === "snowy")     arr = arr.filter(e => e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock");
-    if (activeFilter === "canBeDispatched") arr = arr.filter(e => e.Statuscheck === "OK" && !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock"));
+    if (activeFilter === "canBeDispatched")
+      arr = arr.filter(
+        (e) =>
+          e.Statuscheck === "OK" &&
+          !e.OnHold &&
+          !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock")
+      );
 
     if (s) {
       arr = arr.filter(entry => {
@@ -766,11 +772,11 @@ const OnHoldBoard: React.FC<{
                 </div>
 
                 <div className="mt-2 text-sm space-y-1.5 flex-1">
-                  <div className={CELL}><span className="text-slate-500">Customer：</span>{row.Customer || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Model：</span>{row.Model || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Transport：</span>{row.TransportCompany || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Dealer：</span>{row.TransportDealer || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Matched PO：</span>{row["Matched PO No"] || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Customer: </span>{row.Customer || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Model: </span>{row.Model || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Transport: </span>{row.TransportCompany || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Dealer: </span>{row.TransportDealer || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Matched PO: </span>{row["Matched PO No"] || "-"}</div>
                 </div>
 
                 <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
