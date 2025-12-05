@@ -1,6 +1,3 @@
-+19
--29
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -35,15 +32,11 @@ interface WorkspaceSidebarProps {
 
 const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, onToggle }) => {
   const asideWidth = collapsed ? "w-[72px]" : "w-[270px] lg:w-[300px]";
+  const padding = collapsed ? "p-2" : "p-3";
 
   return (
     <aside
-      className={`relative flex h-full min-h-[560px] flex-col gap-3 rounded-xl border border-border/70 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-100 shadow-sm ${
-        collapsed ? "p-2" : "p-3"
-      } transition-[width] ${asideWidth}`}
-    >
-      <div className="flex items-center justify-between gap-2">
-        {!collapsed && <CardTitle className="text-base font-semibold tracking-tight">Workspace</CardTitle>}
+      className={`relative sticky top-4 self-start min-h-[560px] flex flex-col gap-3 rounded-xl border border-border/70 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-100 shadow-sm transition-[width] sm:top-6 ${padding} ${asideWidth}`}
         <Button
           size="icon"
           variant="secondary"
