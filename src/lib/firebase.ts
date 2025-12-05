@@ -376,7 +376,7 @@ export const getDispatchStats = (
     isSnowyStock(e, chassisToReallocatedTo)
   ).length;
   const canBeDispatched = processedEntries.filter(
-    (e) => e.Statuscheck === "OK" && !isSnowyStock(e, chassisToReallocatedTo)
+    (e) => e.Statuscheck === "OK" && !e.OnHold && !isSnowyStock(e, chassisToReallocatedTo)
   ).length;
 
   return {
