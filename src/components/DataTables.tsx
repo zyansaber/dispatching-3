@@ -761,14 +761,19 @@ const OnHoldBoard: React.FC<{
               <div key={id} className={`h-full min-h-[260px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
                 <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
                   <div className="font-medium text-sm text-slate-900 break-all">{id}</div>
-                  <Button
-                    size="sm"
-                    className="bg-emerald-600 text-white"
-                    disabled={saving[id]}
-                    onClick={() => handlers.handleToggleOnHold(row, false)}
-                  >
-                    Ready
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                      On Hold
+                    </span>
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 text-white"
+                      disabled={saving[id]}
+                      onClick={() => handlers.handleToggleOnHold(row, false)}
+                    >
+                      Mark Ready
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="mt-2 text-sm space-y-1.5 flex-1">
