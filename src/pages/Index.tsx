@@ -11,6 +11,10 @@ import {
   subscribeDispatch,
   subscribeDispatchingNote,
   subscribeReallocation,
+  fetchTransportCompanies,
+  subscribeTransportCompanies,
+  upsertTransportCompany,
+  deleteTransportCompany,
   patchDispatchingNote,
   deleteDispatchingNote,
 } from "@/lib/firebase";
@@ -21,6 +25,8 @@ import {
   ScheduleData,
   ProcessedDispatchEntry,
   ProcessedReallocationEntry,
+  TransportCompany,
+  TransportConfig,
 } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
@@ -34,11 +40,17 @@ interface DashboardContextValue {
   reallocProcessed: ProcessedReallocationEntry[];
   stats: ReturnType<typeof getDispatchStats>;
   loading: boolean;
+  transportCompanies: TransportConfig;
   handleSaveDispatchingNote: (
     chassisNo: string,
     patch: Partial<DispatchingNoteData[string]>
   ) => Promise<void>;
   handleDeleteDispatchingNote: (chassisNo: string) => Promise<void>;
+  handleSaveTransportCompany: (
+    companyId: string | null,
+    data: Partial<TransportCompany>
+  ) => Promise<void>;
+  handleDeleteTransportCompany: (companyId: string) => Promise<void>;
 }
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
@@ -60,6 +72,7 @@ const IndexPage: React.FC = () => {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [transportCompanies, setTransportCompanies] = useState<TransportConfig>({});
 
   const stats = useMemo(() => getDispatchStats(dispatchRaw, reallocRaw), [dispatchRaw, reallocRaw]);
 
@@ -67,20 +80,23 @@ const IndexPage: React.FC = () => {
     let unsubDispatch: (() => void) | null = null;
     let unsubRealloc: (() => void) | null = null;
     let unsubNote: (() => void) | null = null;
+    let unsubTransport: (() => void) | null = null;
 
     (async () => {
       setLoading(true);
       try {
-        const [d, r, s, n] = await Promise.all([
+        const [d, r, s, n, t] = await Promise.all([
           fetchDispatchData(),
           fetchReallocationData(),
           fetchScheduleData(),
           fetchDispatchingNoteData(),
+          fetchTransportCompanies(),
         ]);
         setDispatchRaw(d || {});
         setReallocRaw(r || {});
         setSchedule(s || []);
         setDispatchingNote(n || {});
+        setTransportCompanies(t || {});
       } finally {
         setLoading(false);
       }
@@ -88,12 +104,14 @@ const IndexPage: React.FC = () => {
       unsubDispatch = subscribeDispatch((d) => setDispatchRaw(d || {}));
       unsubRealloc = subscribeReallocation((r) => setReallocRaw(r || {}));
       unsubNote = subscribeDispatchingNote((n) => setDispatchingNote(n || {}));
+      unsubTransport = subscribeTransportCompanies((t) => setTransportCompanies(t || {}));
     })();
 
     return () => {
       unsubDispatch && unsubDispatch();
       unsubRealloc && unsubRealloc();
       unsubNote && unsubNote();
+      unsubTransport && unsubTransport();
     };
   }, []);
 
@@ -120,6 +138,38 @@ const IndexPage: React.FC = () => {
     await deleteDispatchingNote(clean);
   };
 
+  const handleSaveTransportCompany = async (
+    companyId: string | null,
+    data: Partial<TransportCompany>
+  ) => {
+    const normalizedId = companyId?.trim() || null;
+    const payload: Partial<TransportCompany> = {
+      ...data,
+      name: data.name?.trim() || data.name,
+      dealers: data.dealers || [],
+    };
+
+    const id = await upsertTransportCompany(normalizedId, payload);
+    setTransportCompanies((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        ...payload,
+      },
+    }));
+  };
+
+  const handleDeleteTransportCompany = async (companyId: string) => {
+    const cleanId = companyId.trim();
+    if (!cleanId) return;
+    await deleteTransportCompany(cleanId);
+    setTransportCompanies((prev) => {
+      const next = { ...prev };
+      delete next[cleanId];
+      return next;
+    });
+  };
+
   const contextValue: DashboardContextValue = {
     dispatchRaw,
     reallocRaw,
@@ -129,8 +179,11 @@ const IndexPage: React.FC = () => {
     reallocProcessed,
     stats,
     loading,
+    transportCompanies,
     handleSaveDispatchingNote,
     handleDeleteDispatchingNote,
+    handleSaveTransportCompany,
+    handleDeleteTransportCompany,
   };
 
   const sidebarColumn = sidebarCollapsed ? "72px" : "300px";
@@ -147,19 +200,8 @@ const IndexPage: React.FC = () => {
           <main className="flex min-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
             <CardHeader className="border-b border-border/70 pb-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <CardTitle className="text-2xl md:text-3xl">Dispatch Workspace</CardTitle>
-                  <CardDescription>
-                    Stock sheet, dispatch data, and reallocation insights in one place.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    Live subscription
-                  </div>
-                  {loading && <span className="text-xs">Syncing...</span>}
-                </div>
+                <CardTitle className="text-2xl md:text-3xl">Dispatch Workspace</CardTitle>
+                {loading && <CardDescription className="text-right">Syncing latest data…</CardDescription>}
               </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto px-4 pb-4">
