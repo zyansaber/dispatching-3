@@ -16,6 +16,13 @@ const StockPage: React.FC = () => {
     [dispatchProcessed, reallocRaw]
   );
 
+  const formatPickup = (value?: string | null) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleString();
+  };
+
   return (
     <div className="space-y-4">
       <Card className="border-border/80 shadow-sm">
@@ -38,6 +45,9 @@ const StockPage: React.FC = () => {
                   <TableHead className="w-[160px]">Chassis No</TableHead>
                   <TableHead>Model</TableHead>
                   <TableHead>Scheduled Dealer</TableHead>
+                  <TableHead>Reallocation</TableHead>
+                  <TableHead>Transport Company</TableHead>
+                  <TableHead>Transport Time</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -47,7 +57,10 @@ const StockPage: React.FC = () => {
                   <TableRow key={entry["Chassis No"]}>
                     <TableCell className="font-medium">{entry["Chassis No"] || "-"}</TableCell>
                     <TableCell>{entry.Model || "-"}</TableCell>
-                    <TableCell>{entry["Scheduled Dealer"] || entry.reallocatedTo || "-"}</TableCell>
+                    <TableCell>{entry["Scheduled Dealer"] || "-"}</TableCell>
+                    <TableCell>{entry.reallocatedTo || "-"}</TableCell>
+                    <TableCell>{entry.TransportCompany || "-"}</TableCell>
+                    <TableCell>{formatPickup(entry.EstimatedPickupAt)}</TableCell>
                     <TableCell>{entry.Customer || "-"}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-700">
@@ -58,7 +71,7 @@ const StockPage: React.FC = () => {
                 ))}
                 {!readyToDispatch.length && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-sm text-muted-foreground">
                       No vehicles are ready for dispatch yet.
                     </TableCell>
                   </TableRow>
