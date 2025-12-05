@@ -203,9 +203,9 @@ const IndexPage: React.FC = () => {
 
   return (
     <DashboardContext.Provider value={contextValue}>
-      <div className="min-h-screen w-full overflow-hidden bg-slate-50">
+      <div className="min-h-screen w-full overflow-x-hidden bg-slate-50">
         <div
-          className="grid min-h-screen w-full gap-3 px-3 py-4 sm:gap-4 sm:px-4 sm:py-6 lg:gap-6 lg:px-6"
+          className="grid min-h-screen w-full items-start gap-3 px-3 py-4 sm:gap-4 sm:px-4 sm:py-6 lg:gap-6 lg:px-6"
           style={{ gridTemplateColumns: `${sidebarColumn} 1fr` }}
         >
           <WorkspaceSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
