@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useDashboardContext } from "./Index";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 const AdminPage: React.FC = () => {
   const {
@@ -15,6 +16,7 @@ const AdminPage: React.FC = () => {
 
   const [newCompany, setNewCompany] = useState("");
   const [draftDealers, setDraftDealers] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const companies = useMemo(
     () =>
@@ -26,9 +28,19 @@ const AdminPage: React.FC = () => {
   );
 
   const handleAddCompany = async () => {
-    if (!newCompany.trim()) return;
-    await handleSaveTransportCompany(null, { name: newCompany.trim(), dealers: [] });
-    setNewCompany("");
+    const name = newCompany.trim();
+    if (!name) return;
+    setSaving(true);
+    try {
+      await handleSaveTransportCompany(null, { name, dealers: [] });
+      toast.success(`Added ${name}`);
+      setNewCompany("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to add company";
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddDealer = async (companyId: string) => {
@@ -66,12 +78,12 @@ const AdminPage: React.FC = () => {
               placeholder="Add a transport company"
               className="w-64"
             />
-            <Button onClick={handleAddCompany} disabled={!newCompany.trim()}>
-              Add company
+            <Button onClick={handleAddCompany} disabled={!newCompany.trim() || saving}>
+              {saving ? "Saving..." : "Add company"}
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            管理运输公司和可选的 dealer 名单，在 Dispatch Dashboard 中作为下拉选项使用。
+            Manage transport companies and optional dealer lists for use across the dispatch dashboard.
           </p>
         </CardContent>
       </Card>
@@ -133,7 +145,7 @@ const AdminPage: React.FC = () => {
 
         {!companies.length && (
           <div className="col-span-full rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            暂无运输公司，请先添加。
+            No transport companies yet. Add one to get started.
           </div>
         )}
       </div>
