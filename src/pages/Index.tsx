@@ -40,12 +40,14 @@ interface DashboardContextValue {
   reallocProcessed: ProcessedReallocationEntry[];
   stats: ReturnType<typeof getDispatchStats>;
   loading: boolean;
+  refreshing: boolean;
   transportCompanies: TransportConfig;
   handleSaveDispatchingNote: (
     chassisNo: string,
     patch: Partial<DispatchingNoteData[string]>
   ) => Promise<void>;
   handleDeleteDispatchingNote: (chassisNo: string) => Promise<void>;
+  handleRefreshData: () => Promise<void>;
   handleSaveTransportCompany: (
     companyId: string | null,
     data: Partial<TransportCompany>
@@ -71,6 +73,7 @@ const IndexPage: React.FC = () => {
   const [reallocProcessed, setReallocProcessed] = useState<ProcessedReallocationEntry[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [transportCompanies, setTransportCompanies] = useState<TransportConfig>({});
 
@@ -82,30 +85,18 @@ const IndexPage: React.FC = () => {
     let unsubNote: (() => void) | null = null;
     let unsubTransport: (() => void) | null = null;
 
-    (async () => {
+    const initialLoad = async () => {
       setLoading(true);
-      try {
-        const [d, r, s, n, t] = await Promise.all([
-          fetchDispatchData(),
-          fetchReallocationData(),
-          fetchScheduleData(),
-          fetchDispatchingNoteData(),
-          fetchTransportCompanies(),
-        ]);
-        setDispatchRaw(d || {});
-        setReallocRaw(r || {});
-        setSchedule(s || []);
-        setDispatchingNote(n || {});
-        setTransportCompanies(t || {});
-      } finally {
-        setLoading(false);
-      }
+      await handleRefreshData();
+      setLoading(false);
+    };
 
-      unsubDispatch = subscribeDispatch((d) => setDispatchRaw(d || {}));
-      unsubRealloc = subscribeReallocation((r) => setReallocRaw(r || {}));
-      unsubNote = subscribeDispatchingNote((n) => setDispatchingNote(n || {}));
-      unsubTransport = subscribeTransportCompanies((t) => setTransportCompanies(t || {}));
-    })();
+    initialLoad();
+
+    unsubDispatch = subscribeDispatch((d) => setDispatchRaw(d || {}));
+    unsubRealloc = subscribeReallocation((r) => setReallocRaw(r || {}));
+    unsubNote = subscribeDispatchingNote((n) => setDispatchingNote(n || {}));
+    unsubTransport = subscribeTransportCompanies((t) => setTransportCompanies(t || {}));
 
     return () => {
       unsubDispatch && unsubDispatch();
@@ -170,6 +161,26 @@ const IndexPage: React.FC = () => {
     });
   };
 
+  const handleRefreshData = async () => {
+    setRefreshing(true);
+    try {
+      const [d, r, s, n, t] = await Promise.all([
+        fetchDispatchData(),
+        fetchReallocationData(),
+        fetchScheduleData(),
+        fetchDispatchingNoteData(),
+        fetchTransportCompanies(),
+      ]);
+      setDispatchRaw(d || {});
+      setReallocRaw(r || {});
+      setSchedule(s || []);
+      setDispatchingNote(n || {});
+      setTransportCompanies(t || {});
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const contextValue: DashboardContextValue = {
     dispatchRaw,
     reallocRaw,
@@ -179,9 +190,11 @@ const IndexPage: React.FC = () => {
     reallocProcessed,
     stats,
     loading,
+    refreshing,
     transportCompanies,
     handleSaveDispatchingNote,
     handleDeleteDispatchingNote,
+    handleRefreshData,
     handleSaveTransportCompany,
     handleDeleteTransportCompany,
   };
