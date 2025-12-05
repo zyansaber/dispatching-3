@@ -1,4 +1,6 @@
-import { Badge } from "@/components/ui/badge";
++19
+-29
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -36,16 +38,16 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
 
   return (
     <aside
-      className={`relative flex h-full min-h-[560px] flex-col gap-3 rounded-xl border border-border/70 bg-background/90 ${
+      className={`relative flex h-full min-h-[560px] flex-col gap-3 rounded-xl border border-border/70 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-100 shadow-sm ${
         collapsed ? "p-2" : "p-3"
-      } shadow-sm backdrop-blur transition-[width] ${asideWidth}`}
+      } transition-[width] ${asideWidth}`}
     >
       <div className="flex items-center justify-between gap-2">
-        {!collapsed && <CardTitle className="text-base">Workspace</CardTitle>}
+        {!collapsed && <CardTitle className="text-base font-semibold tracking-tight">Workspace</CardTitle>}
         <Button
           size="icon"
-          variant="ghost"
-          className="h-8 w-8"
+          variant="secondary"
+          className="h-8 w-8 bg-white/10 text-white hover:bg-white/20"
           onClick={onToggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -53,30 +55,23 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
         </Button>
       </div>
 
-      <Card className="border-border/80 shadow-sm">
+      <Card className="border-none bg-white/5 shadow-lg">
         <CardHeader
           className={`pb-3 ${
             collapsed ? "flex flex-col items-center space-y-2" : "flex flex-row items-start justify-between space-y-0"
           }`}
         >
           <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
-            <div className="relative flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
-              DW
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-lg bg-white/15 text-white font-semibold">
+              <span className="text-lg">🚚</span>
             </div>
             {!collapsed && (
-              <div>
-                <CardTitle className="text-lg">Dispatch Workspace</CardTitle>
-                <p className="text-sm text-muted-foreground">Realtime stock & dispatch monitor</p>
+              <div className="space-y-0.5">
+                <CardTitle className="text-lg text-white">Dispatch Workspace</CardTitle>
+                <p className="text-sm text-slate-200/80">Organize dispatch, stock, and reallocations.</p>
               </div>
             )}
           </div>
-          {!collapsed && (
-            <Badge variant="secondary" className="gap-2 px-2.5 py-1 text-[11px]">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              Live
-            </Badge>
-          )}
         </CardHeader>
         <CardContent className="space-y-2">
           {navItems.map((item) => {
@@ -86,13 +81,11 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `group relative flex w-full items-center gap-2 rounded-md border text-sm transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                    isActive ? "border-primary/60 bg-primary/10 text-primary" : "border-border/80 bg-background text-foreground"
-                  } ${
-                    collapsed
-                      ? "h-12 justify-center px-2"
-                      : "h-11 justify-start px-3"
-                  }`
+                  `group relative flex w-full items-center gap-2 rounded-md text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:ring-white/60 ${
+                    isActive
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "border border-white/10 bg-white/5 text-white hover:border-white/30 hover:bg-white/10"
+                  } ${collapsed ? "h-12 justify-center px-2" : "h-11 justify-start px-3"}`
                 }
                 end
                 aria-label={item.label}
@@ -100,11 +93,11 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`absolute left-1 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-primary transition ${
+                      className={`absolute left-1 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-white transition ${
                         collapsed ? "" : "left-2"
-                      } ${isActive ? "opacity-100" : "opacity-0"}`}
+                      } ${isActive ? "opacity-80" : "opacity-0"}`}
                     />
-                    <Icon className="h-4 w-4" aria-hidden />
+                    <Icon className={isActive ? "h-4 w-4 text-slate-900" : "h-4 w-4 text-white"} aria-hidden />
                     {!collapsed && item.label}
                   </>
                 )}
