@@ -1,4 +1,3 @@
-
 import React, { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,6 +8,7 @@ import { toast } from "sonner";
 import {
   DispatchingNoteData,
   DispatchingNoteEntry,
+  ProcessedDispatchEntry,
   ReallocationData,
   ScheduleData,
 } from "@/types";
@@ -17,6 +17,7 @@ interface StockSheetTableProps {
   notes: DispatchingNoteData;
   schedule: ScheduleData;
   reallocations: ReallocationData;
+  dispatchData: ProcessedDispatchEntry[];
   onSave: (chassisNo: string, patch: Partial<DispatchingNoteEntry>) => Promise<void>;
   onDelete: (chassisNo: string) => Promise<void>;
 }
@@ -25,6 +26,7 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
   notes,
   schedule,
   reallocations,
+  dispatchData,
   onSave,
   onDelete,
 }) => {
@@ -49,6 +51,17 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
   const [importing, setImporting] = useState(false);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const dispatchLookup = useMemo(() => {
+    const map = new Map<string, ProcessedDispatchEntry>();
+    (dispatchData || []).forEach((entry) => {
+      const chassis = (entry?.["Chassis No"] || "").toLowerCase().trim();
+      if (chassis) {
+        map.set(chassis, entry);
+      }
+    });
+    return map;
+  }, [dispatchData]);
 
   const findLatestReallocatedDealer = (chassisNo: string) => {
     const entries = reallocations[chassisNo];
@@ -123,11 +136,19 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
     };
   };
 
+  const formatPickupTime = (value?: string | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString();
+  };
+
   const processedRows = useMemo(() => {
     const entries = Object.entries(notes || {});
     return entries
       .map(([key, value]) => {
         const chassisNo = value.chassisNo || key;
+        const dispatchInfo = dispatchLookup.get(chassisNo.toLowerCase().trim());
         const scheduleInfo = pickScheduleInfo(chassisNo);
         const manualReallocated = value.reallocatedDealer || "";
         const reallocatedDealer = manualReallocated || findLatestReallocatedDealer(chassisNo);
@@ -142,10 +163,12 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
           reallocatedDealer: reallocatedDealer || "",
           customer: value.customerName || scheduleInfo.customerName || "",
           backgroundColor: value.backgroundColor ?? "",
+          transportCompany: dispatchInfo?.TransportCompany || "",
+          pickupAt: dispatchInfo?.EstimatedPickupAt || "",
         };
       })
       .sort((a, b) => a.chassisNo.localeCompare(b.chassisNo, undefined, { sensitivity: "base" }));
-  }, [notes, schedule, reallocations]);
+  }, [notes, schedule, reallocations, dispatchLookup]);
 
   const normalizedModelRange = modelRangeFilter.trim().toLowerCase();
 
@@ -508,6 +531,12 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
                 Customer Name
               </TableHead>
               <TableHead className="min-w-[160px] h-10 px-3 py-2 border-l border-slate-200/70">
+                Transport Company
+              </TableHead>
+              <TableHead className="min-w-[170px] h-10 px-3 py-2 border-l border-slate-200/70">
+                Ready for Transport
+              </TableHead>
+              <TableHead className="min-w-[160px] h-10 px-3 py-2 border-l border-slate-200/70">
                 Update
               </TableHead>
               <TableHead className="min-w-[150px] h-10 px-3 py-2 border-l border-slate-200/70">
@@ -521,7 +550,7 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
           <TableBody>
             {visibleRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-sm text-slate-500 py-6">
+                <TableCell colSpan={11} className="text-center text-sm text-slate-500 py-6">
                   {hideDispatched ? "No pending records" : "No stock sheet records yet"}
                 </TableCell>
               </TableRow>
@@ -543,12 +572,14 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
             const reallocatedDealerValue = isEditing
               ? draft.reallocatedDealer ?? row.reallocatedDealer
               : row.reallocatedDealer;
-            const customerValue = isEditing
-              ? draft.customerName ?? row.customer
-              : row.customer;
-            const resolvedBackgroundColor = row.backgroundColor || undefined;
-            const colorPickerValue =
-              row.backgroundColor || (row.dispatched ? "#ecfdf3" : "#ffffff");
+              const customerValue = isEditing
+                ? draft.customerName ?? row.customer
+                : row.customer;
+            const transportCompanyValue = row.transportCompany;
+            const pickupDisplay = formatPickupTime(row.pickupAt);
+              const resolvedBackgroundColor = row.backgroundColor || undefined;
+              const colorPickerValue =
+                row.backgroundColor || (row.dispatched ? "#ecfdf3" : "#ffffff");
 
             return (
               <TableRow
@@ -677,6 +708,12 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
                     ) : (
                       customerValue || "-"
                     )}
+                  </TableCell>
+                  <TableCell className="align-top text-slate-700 px-3 py-2 border-l border-slate-200/70">
+                    {transportCompanyValue || "-"}
+                  </TableCell>
+                  <TableCell className="align-top text-slate-700 px-3 py-2 border-l border-slate-200/70">
+                    {pickupDisplay || "-"}
                   </TableCell>
                   <TableCell className="align-top px-3 py-2 border-l border-slate-200/70">
                     {isEditing ? (
