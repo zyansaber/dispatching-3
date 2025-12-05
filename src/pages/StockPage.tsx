@@ -1,40 +1,73 @@
-import React from "react";
-import StockSheetTable from "@/components/StockSheetTable";
-import { Button } from "@/components/ui/button";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { filterDispatchData } from "@/lib/firebase";
 import { useDashboardContext } from "./Index";
 
 const StockPage: React.FC = () => {
-  const { dispatchingNote, schedule, reallocRaw, handleSaveDispatchingNote, handleDeleteDispatchingNote } =
-    useDashboardContext();
+  const { dispatchProcessed, reallocRaw } = useDashboardContext();
+
+  const readyToDispatch = useMemo(
+    () =>
+      filterDispatchData(dispatchProcessed, "canBeDispatched", reallocRaw).sort((a, b) =>
+        (a["Chassis No"] || "").localeCompare(b["Chassis No"] || "")
+      ),
+    [dispatchProcessed, reallocRaw]
+  );
 
   return (
     <div className="space-y-4">
       <Card className="border-border/80 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Stock Sheet</CardTitle>
-          <CardDescription>Manage notes, scheduling, and reallocations in the live stock sheet.</CardDescription>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-lg">Stock Sheet</CardTitle>
+              <CardDescription>Vehicles that can dispatch right now.</CardDescription>
+            </div>
+            <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold">
+              {readyToDispatch.length} ready
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <StockSheetTable
-            notes={dispatchingNote}
-            schedule={schedule}
-            reallocations={reallocRaw}
-            onSave={handleSaveDispatchingNote}
-            onDelete={handleDeleteDispatchingNote}
-          />
+          <div className="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[160px]">Chassis No</TableHead>
+                  <TableHead>Model</TableHead>
+                  <TableHead>Scheduled Dealer</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {readyToDispatch.map((entry) => (
+                  <TableRow key={entry["Chassis No"]}>
+                    <TableCell className="font-medium">{entry["Chassis No"] || "-"}</TableCell>
+                    <TableCell>{entry.Model || "-"}</TableCell>
+                    <TableCell>{entry["Scheduled Dealer"] || entry.reallocatedTo || "-"}</TableCell>
+                    <TableCell>{entry.Customer || "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-700">
+                        Can dispatch
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!readyToDispatch.length && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                      No vehicles are ready for dispatch yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        <div className="space-y-0.5">
-          <p className="font-medium text-foreground">Need dispatch context?</p>
-          <p className="text-xs">Jump to the dashboard for filters, stats, and table tools.</p>
-        </div>
-        <Button variant="outline" size="sm" asChild>
-          <a href="/dispatch">Go to Dispatch Dashboard</a>
-        </Button>
-      </div>
     </div>
   );
 };
