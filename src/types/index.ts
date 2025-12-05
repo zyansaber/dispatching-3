@@ -89,6 +89,7 @@ export interface ScheduleEntry {
 
 export type ScheduleData = ScheduleEntry[];
 
+
 /** ----------------------------
  *  Dispatch（/Dispatch）集合类型
  * ----------------------------- */
@@ -114,3 +115,16 @@ export interface DispatchingNoteEntry {
 }
 
 export type DispatchingNoteData = Record<string, DispatchingNoteEntry>;
+
+/** ----------------------------
+ *  Transport Companies（/transportCompanies）
+ * ----------------------------- */
+
+export interface TransportCompany {
+  name: string;
+  dealers?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type TransportConfig = Record<string, TransportCompany>;
