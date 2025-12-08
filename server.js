@@ -27,7 +27,13 @@ const server = createServer(async (req, res) => {
   try {
     const requestedPath = new URL(req.url || '/', `http://${req.headers.host}`).pathname;
 
-    if (requestedPath === '/api/gemini' && req.method === 'POST') {
+    if (requestedPath === '/api/gemini') {
+      if (req.method !== 'POST') {
+        res.writeHead(405, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+        return;
+      }
+
       const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
@@ -36,7 +42,7 @@ const server = createServer(async (req, res) => {
         return;
       }
 
-      const body = await new Promise((resolve, reject) => {
+      const rawBody = await new Promise((resolve, reject) => {
         let data = '';
         req.on('data', (chunk) => {
           data += chunk;
@@ -45,22 +51,44 @@ const server = createServer(async (req, res) => {
         req.on('error', reject);
       });
 
+      if (!rawBody) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Request body is empty.' }));
+        return;
+      }
+
       let parsed;
       try {
-        parsed = JSON.parse(body || '{}');
+        parsed = JSON.parse(rawBody);
       } catch (parseError) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Invalid JSON payload.' }));
         return;
       }
 
-      const prompt = parsed?.prompt;
-      const image = parsed?.image;
+      const prompt = typeof parsed?.prompt === 'string' && parsed.prompt.trim() ? parsed.prompt : undefined;
+      const image = parsed?.image && typeof parsed.image === 'object' ? parsed.image : undefined;
 
       if (!prompt && !image) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Provide at least "prompt" or "image" in the payload.' }));
         return;
+      }
+
+      const imageData = image?.data;
+      const imageMimeType = image?.mimeType;
+      if (image) {
+        if (typeof imageData !== 'string' || !imageData.trim()) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'image.data must be a base64 string.' }));
+          return;
+        }
+
+        if (imageMimeType && typeof imageMimeType !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'image.mimeType must be a string when provided.' }));
+          return;
+        }
       }
 
       const requestBody = {
@@ -72,8 +100,8 @@ const server = createServer(async (req, res) => {
                 ? [
                     {
                       inline_data: {
-                        mime_type: image.mimeType || 'image/png',
-                        data: image.data,
+                        mime_type: imageMimeType || 'image/png',
+                        data: imageData,
                       },
                     },
                   ]
