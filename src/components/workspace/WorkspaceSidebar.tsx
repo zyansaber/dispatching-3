@@ -33,10 +33,12 @@ interface WorkspaceSidebarProps {
 const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, onToggle }) => {
   const asideWidth = collapsed ? "w-[72px]" : "w-[270px] lg:w-[300px]";
   const padding = collapsed ? "p-2" : "p-3";
+  const navButtonClasses = collapsed ? "h-12 justify-center px-2" : "h-11 justify-start px-3";
+  const navButtonGap = collapsed ? "gap-0" : "gap-3";
 
   return (
     <aside
-      className={`relative sticky top-4 self-start min-h-[560px] flex flex-col gap-3 rounded-xl border border-border/70 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-100 shadow-sm transition-[width] sm:top-6 ${padding} ${asideWidth}`}
+      className={`relative sticky top-4 self-start min-h-[560px] flex flex-col gap-3 rounded-xl border border-border/70 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-100 shadow-sm transition-[width,padding] duration-200 sm:top-6 ${padding} ${asideWidth}`}
     >
       <div className="flex items-center justify-between gap-2">
         {!collapsed && <CardTitle className="text-base font-semibold tracking-tight">Workspace</CardTitle>}
@@ -77,11 +79,11 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `group relative flex w-full items-center gap-2 rounded-md text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:ring-white/60 ${
+                  `group relative flex w-full items-center rounded-md text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:ring-white/60 ${
                     isActive
                       ? "bg-white text-slate-900 shadow-sm"
                       : "border border-white/10 bg-white/5 text-white hover:border-white/30 hover:bg-white/10"
-                  } ${collapsed ? "h-12 justify-center px-2" : "h-11 justify-start px-3"}`
+                  } ${navButtonClasses} ${navButtonGap}`
                 }
                 end
                 aria-label={item.label}
@@ -93,7 +95,12 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
                         collapsed ? "" : "left-2"
                       } ${isActive ? "opacity-80" : "opacity-0"}`}
                     />
-                    <Icon className={isActive ? "h-4 w-4 text-slate-900" : "h-4 w-4 text-white"} aria-hidden />
+                    <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/5 text-white transition group-hover:bg-white/10">
+                      <Icon
+                        className={`${isActive ? "text-slate-900" : "text-white"} h-5 w-5 shrink-0`}
+                        aria-hidden
+                      />
+                    </span>
                     {!collapsed && item.label}
                   </>
                 )}
@@ -116,5 +123,7 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
     </aside>
   );
 };
+
+export default WorkspaceSidebar;
 
 export default WorkspaceSidebar;
