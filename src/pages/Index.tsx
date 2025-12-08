@@ -210,14 +210,14 @@ const IndexPage: React.FC = () => {
         >
           <WorkspaceSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
 
-          <main className="flex min-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
+          <main className="flex min-h-[calc(100vh-2rem)] flex-col rounded-xl border border-border/70 bg-background shadow-sm">
             <CardHeader className="border-b border-border/70 pb-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <CardTitle className="text-2xl md:text-3xl">Dispatch Workspace</CardTitle>
                 {loading && <CardDescription className="text-right">Syncing latest data…</CardDescription>}
               </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-auto px-4 pb-4">
+            <CardContent className="flex-1 px-4 pb-6">
               <Outlet />
             </CardContent>
           </main>
