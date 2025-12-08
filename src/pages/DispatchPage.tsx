@@ -1,4 +1,7 @@
-import React, { useState } from "react";
++19
+-2
+
+import React, { useEffect, useState } from "react";
 import { DispatchStats, DispatchTable } from "@/components/DataTables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,11 +17,19 @@ const DispatchPage: React.FC = () => {
     transportCompanies,
     handleRefreshData,
     refreshing,
+    sidebarFilter,
+    setSidebarFilter,
   } = useDashboardContext();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "invalid" | "snowy" | "canBeDispatched" | "onHold">(
     "all"
   );
+
+  useEffect(() => {
+    if (sidebarFilter?.kind === "grRange") {
+      setActiveFilter("canBeDispatched");
+    }
+  }, [sidebarFilter]);
 
   return (
     <div className="space-y-6">
@@ -48,7 +59,15 @@ const DispatchPage: React.FC = () => {
           <Sparkles className="h-4 w-4 text-primary" />
           <span>Use the summary cards or search box to focus on the right queue.</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {sidebarFilter?.kind === "grRange" && (
+            <Badge variant="outline" className="flex items-center gap-2 rounded-full px-3 py-1 text-xs">
+              GR Days: {sidebarFilter.label}
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setSidebarFilter(null)}>
+                ×
+              </Button>
+            </Badge>
+          )}
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -68,6 +87,7 @@ const DispatchPage: React.FC = () => {
         onSearchChange={setSearch}
         reallocationData={reallocProcessed}
         transportCompanies={transportCompanies}
+        grRangeFilter={sidebarFilter?.kind === "grRange" ? sidebarFilter : null}
       />
     </div>
   );
