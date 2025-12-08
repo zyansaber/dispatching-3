@@ -1,6 +1,3 @@
-+105
--92
-
 import React, { type ComponentType, type SVGProps } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,29 +94,28 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
           </nav>
         </div>
 
-        <div className="px-4 py-4">
-          {!collapsed && (
+        {!collapsed && (
+          <div className="px-4 py-4">
             <div className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Workspace Overview</div>
-          )}
-          <div className="grid grid-cols-1 gap-3">
-            <Card className="border border-slate-800 bg-slate-900 shadow-inner">
-              <CardHeader className={`pb-2 ${collapsed ? "p-3" : "px-4 pt-4 pb-2"}`}>
-                <CardTitle className="flex items-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
-                  <Package className={`h-3.5 w-3.5 ${collapsed ? "" : "mr-2"}`} />
-                  {!collapsed && <span>Total Orders</span>}
-                  {collapsed && <span className="sr-only">Total Orders</span>}
-                  <Badge variant="secondary" className="ml-auto bg-slate-800 text-slate-50">
-                    Ready {totals.ready}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className={`${collapsed ? "p-3" : "px-4 pb-4 pt-1"}`}>
-                <div className="text-2xl font-bold text-white">{totals.total}</div>
-                {!collapsed && <p className="mt-1 text-xs text-slate-400">Snowy stock: {totals.snowy}</p>}
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 gap-3">
+              <Card className="border border-slate-800 bg-slate-900 shadow-inner">
+                <CardHeader className="px-4 pt-4 pb-2">
+                  <CardTitle className="flex items-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+                    <Package className="mr-2 h-3.5 w-3.5" />
+                    <span>Total Orders</span>
+                    <Badge variant="secondary" className="ml-auto bg-slate-800 text-slate-50">
+                      Ready {totals.ready}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 pt-1">
+                  <div className="text-2xl font-bold text-white">{totals.total}</div>
+                  <p className="mt-1 text-xs text-slate-400">Snowy stock: {totals.snowy}</p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="mt-auto border-t border-slate-800 px-3 py-3">
