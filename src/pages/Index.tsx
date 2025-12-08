@@ -199,7 +199,7 @@ const IndexPage: React.FC = () => {
     handleDeleteTransportCompany,
   };
 
-  const sidebarColumn = sidebarCollapsed ? "72px" : "300px";
+  const sidebarColumn = sidebarCollapsed ? "80px" : "304px";
 
   return (
     <DashboardContext.Provider value={contextValue}>
@@ -208,7 +208,11 @@ const IndexPage: React.FC = () => {
           className="grid min-h-screen w-full items-start gap-3 px-3 py-4 sm:gap-4 sm:px-4 sm:py-6 lg:gap-6 lg:px-6"
           style={{ gridTemplateColumns: `${sidebarColumn} 1fr` }}
         >
-          <WorkspaceSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)} />
+          <WorkspaceSidebar
+            collapsed={sidebarCollapsed}
+            onToggle={() => setSidebarCollapsed((c) => !c)}
+            stats={stats}
+          />
 
           <main className="flex min-h-[calc(100vh-2rem)] flex-col rounded-xl border border-border/70 bg-background shadow-sm">
             <CardHeader className="border-b border-border/70 pb-4">
