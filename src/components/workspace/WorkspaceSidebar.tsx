@@ -3,29 +3,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { NavLink } from "react-router-dom";
-import {
-  ArrowLeftRight,
-  BarChart3,
-  Factory,
-  PanelLeft,
-  PanelRight,
-  Settings,
-  Package,
-  type LucideIcon,
-} from "lucide-react";
+import { PanelLeft, PanelRight, Package } from "lucide-react";
 
 export type WorkspaceNavItem = {
   to: string;
   label: string;
-  icon: LucideIcon;
   end?: boolean;
 };
 
 const navItems: WorkspaceNavItem[] = [
-  { to: "/dispatch", label: "Dealer Orders", icon: BarChart3, end: true },
-  { to: "/stock", label: "Factory & Yard", icon: Factory, end: true },
-  { to: "/reallocation", label: "Reallocation", icon: ArrowLeftRight, end: true },
-  { to: "/admin", label: "Admin", icon: Settings, end: true },
+  { to: "/stock", label: "Stock Sheet", end: true },
+  { to: "/dispatch", label: "Dispatch Dashboard", end: true },
+  { to: "/reallocation", label: "Reallocation", end: true },
+  { to: "/admin", label: "Admin", end: true },
 ];
 
 interface WorkspaceSidebarProps {
@@ -47,25 +37,13 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
 
   return (
     <aside
-      className={`sticky top-4 z-20 flex self-start min-h-[560px] flex-col overflow-hidden rounded-xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-50 shadow-xl transition-all duration-300 ease-in-out sm:top-6 ${
+      className={`fixed left-0 top-0 z-20 flex h-screen flex-col overflow-hidden border-r border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-50 shadow-xl transition-all duration-300 ease-in-out ${
         collapsed ? "w-[80px]" : "w-[288px] lg:w-[304px]"
       }`}
     >
       <div className="flex h-full flex-1 flex-col">
-        <div className="relative flex items-center gap-3 border-b border-slate-800 px-4 py-4">
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-slate-200">
-            <img
-              src="/assets/snowy-river-logo.svg"
-              alt="Snowy River Caravans"
-              className="h-9 w-9 object-contain"
-            />
-          </div>
-          {!collapsed && (
-            <div className="space-y-0.5">
-              <h1 className="text-base font-semibold leading-tight">Dealer Portal</h1>
-              <p className="text-sm text-slate-300">Orders and inventory</p>
-            </div>
-          )}
+        <div className="relative flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-4">
+          {!collapsed && <h1 className="text-base font-semibold leading-tight">Workspace</h1>}
         </div>
 
         <div className="border-b border-slate-800 px-3 py-3">
@@ -76,16 +54,14 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
                   <Button
                     variant="ghost"
                     className={`flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      collapsed ? "justify-center px-2" : ""
+                      collapsed ? "justify-center px-2 text-xs" : ""
                     } ${
                       isActive
                         ? "bg-slate-800 text-white shadow-inner"
                         : "text-slate-200 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
-                    <item.icon className="h-5 w-5" />
-                    {!collapsed && <span>{item.label}</span>}
-                    {collapsed && <span className="sr-only">{item.label}</span>}
+                    <span className="truncate text-center leading-tight">{item.label}</span>
                   </Button>
                 )}
               </NavLink>
