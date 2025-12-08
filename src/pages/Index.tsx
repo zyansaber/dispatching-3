@@ -214,8 +214,6 @@ const IndexPage: React.FC = () => {
         />
 
         <div className="min-h-screen w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
-          style={{ marginLeft: sidebarColumn, transition: "margin-left 0.3s ease-in-out" }}
-        >
           <main className="flex min-h-[calc(100vh-2rem)] flex-col rounded-xl border border-border/70 bg-background shadow-sm">
             <CardHeader className="border-b border-border/70 pb-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
