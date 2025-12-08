@@ -126,5 +126,3 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
 };
 
 export default WorkspaceSidebar;
-
-export default WorkspaceSidebar;
