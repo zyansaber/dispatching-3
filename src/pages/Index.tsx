@@ -203,15 +203,17 @@ const IndexPage: React.FC = () => {
 
   return (
     <DashboardContext.Provider value={contextValue}>
-      <div className="min-h-screen w-full overflow-x-hidden bg-slate-50">
+      <div
+        className="min-h-screen bg-slate-50"
+        style={{ paddingLeft: sidebarColumn, transition: "padding-left 0.3s ease-in-out" }}
+      >
         <WorkspaceSidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((c) => !c)}
           stats={stats}
         />
 
-        <div
-          className="min-h-screen w-full items-start px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
+        <div className="min-h-screen w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
           style={{ marginLeft: sidebarColumn, transition: "margin-left 0.3s ease-in-out" }}
         >
           <main className="flex min-h-[calc(100vh-2rem)] flex-col rounded-xl border border-border/70 bg-background shadow-sm">
