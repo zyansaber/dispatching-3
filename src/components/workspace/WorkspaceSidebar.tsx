@@ -1,21 +1,34 @@
++105
+-92
+
+import React, { type ComponentType, type SVGProps } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { NavLink } from "react-router-dom";
-import { PanelLeft, PanelRight, Package } from "lucide-react";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  PanelLeft,
+  PanelRight,
+  Package,
+  Repeat,
+  ShieldCheck,
+} from "lucide-react";
 
 export type WorkspaceNavItem = {
   to: string;
   label: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
   end?: boolean;
 };
 
 const navItems: WorkspaceNavItem[] = [
-  { to: "/stock", label: "Stock Sheet", end: true },
-  { to: "/dispatch", label: "Dispatch Dashboard", end: true },
-  { to: "/reallocation", label: "Reallocation", end: true },
-  { to: "/admin", label: "Admin", end: true },
+  { to: "/stock", label: "Stock Sheet", icon: ClipboardList, end: true },
+  { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
+  { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
 ];
 
 interface WorkspaceSidebarProps {
@@ -49,22 +62,37 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({ collapsed = false, 
         <div className="border-b border-slate-800 px-3 py-3">
           <nav className="space-y-1">
             {navItems.map((item) => (
-              <NavLink key={item.label} to={item.to} end={item.end}>
-                {({ isActive }) => (
-                  <Button
-                    variant="ghost"
-                    className={`flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      collapsed ? "justify-center px-2 text-xs" : ""
-                    } ${
-                      isActive
-                        ? "bg-slate-800 text-white shadow-inner"
-                        : "text-slate-200 hover:bg-slate-800 hover:text-white"
-                    }`}
-                  >
-                    <span className="truncate text-center leading-tight">{item.label}</span>
-                  </Button>
-                )}
-              </NavLink>
+              <Tooltip key={item.label} disableHoverableContent={!collapsed} delayDuration={120}>
+                <TooltipTrigger asChild>
+                  <NavLink to={item.to} end={item.end}>
+                    {({ isActive }) => (
+                      <Button
+                        variant="ghost"
+                        className={`group relative flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                          collapsed ? "justify-center px-2 text-xs" : ""
+                        } ${
+                          isActive
+                            ? "bg-slate-800 text-white shadow-inner ring-1 ring-slate-700"
+                            : "text-slate-200 hover:bg-slate-800 hover:text-white"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-9 w-9 items-center justify-center rounded-md border text-slate-100 shadow-sm transition ${
+                            isActive
+                              ? "border-slate-600 bg-slate-800"
+                              : "border-slate-800 bg-slate-900 group-hover:border-slate-700"
+                          }`}
+                        >
+                          <item.icon className="h-4 w-4" />
+                        </span>
+                        {!collapsed && <span className="truncate text-left leading-tight">{item.label}</span>}
+                        {collapsed && <span className="sr-only">{item.label}</span>}
+                      </Button>
+                    )}
+                  </NavLink>
+                </TooltipTrigger>
+                {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
+              </Tooltip>
             ))}
           </nav>
         </div>
