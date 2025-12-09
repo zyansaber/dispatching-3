@@ -8,6 +8,7 @@ import { ArrowUpDown, AlertTriangle, Mail, Download, RotateCw } from "lucide-rea
 import { ProcessedDispatchEntry, ProcessedReallocationEntry, TransportConfig } from "@/types";
 import { getGRDaysColor, getGRDaysWidth, reportError, patchDispatch } from "@/lib/firebase";
 import { toast } from "sonner";
+import type { SidebarFilter } from "@/pages/Index";
 
 // XLSX（CDN 注入）
 declare global { interface Window { XLSX?: any } }
@@ -102,10 +103,17 @@ interface DispatchTableProps {
   onSearchChange: (term: string) => void;
   reallocationData: ProcessedReallocationEntry[];
   transportCompanies?: TransportConfig;
+  grRangeFilter?: SidebarFilter | null;
 }
 
 export const DispatchTable: React.FC<DispatchTableProps> = ({
-  allData, activeFilter = "all", searchTerm, onSearchChange, reallocationData, transportCompanies = {}
+  allData,
+  activeFilter = "all",
+  searchTerm,
+  onSearchChange,
+  reallocationData,
+  transportCompanies = {},
+  grRangeFilter = null,
 }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc'; } | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
@@ -166,6 +174,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock")
       );
 
+    if (grRangeFilter?.kind === "grRange") {
+      arr = arr.filter((e) => {
+        const days = Number(e["GR to GI Days"] ?? 0) || 0;
+        const meetsMin = days >= grRangeFilter.min;
+        const meetsMax = grRangeFilter.max == null ? true : days <= grRangeFilter.max;
+        return meetsMin && meetsMax;
+      });
+    }
+
     if (s) {
       arr = arr.filter(entry => {
         const d = entry;
@@ -205,7 +222,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       });
     }
     return arr;
-  }, [baseMerged, searchTerm, activeFilter, sortConfig, reallocationData]);
+  }, [baseMerged, searchTerm, activeFilter, sortConfig, reallocationData, grRangeFilter]);
 
   const activeRows = filtered.filter(e => !e.OnHold);
   const onHoldRows = filtered.filter(e =>  e.OnHold);
