@@ -64,6 +64,14 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
   const grRanges = stats?.grRanges || [];
   const maxRangeCount = useMemo(() => Math.max(...grRanges.map((r) => r.count || 0), 1), [grRanges]);
+  const barColors = [
+    "linear-gradient(90deg, #38bdf8, #3b82f6)",
+    "linear-gradient(90deg, #22c55e, #16a34a)",
+    "linear-gradient(90deg, #f97316, #ea580c)",
+    "linear-gradient(90deg, #a855f7, #7c3aed)",
+    "linear-gradient(90deg, #eab308, #ca8a04)",
+    "linear-gradient(90deg, #06b6d4, #0891b2)",
+  ];
 
   return (
     <aside
@@ -190,9 +198,11 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
               {totals.ready} ready
             </Badge>
           </div>
-          <div className="flex items-end gap-2">
-            {grRanges.map((bucket) => {
-              const height = Math.max((bucket.count / maxRangeCount) * 100, 12);
+          <div className="space-y-2">
+            {grRanges.map((bucket, index) => {
+              const width = Math.max((bucket.count / maxRangeCount) * 100, 6);
+              const color = barColors[index % barColors.length];
+
               return (
                 <Tooltip key={bucket.label} delayDuration={120}>
                   <TooltipTrigger asChild>
@@ -206,12 +216,23 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                           max: bucket.max,
                         })
                       }
-                      className={`flex-1 rounded-md border border-slate-800 bg-gradient-to-t from-slate-800 to-slate-700 transition hover:border-blue-500 hover:from-blue-900 hover:to-blue-700 ${
-                        collapsed ? "min-w-[10px]" : "min-w-[40px]"
+                      className={`w-full rounded-md border border-slate-800 bg-slate-900/80 px-3 py-2 text-left transition hover:border-blue-500 ${
+                        collapsed ? "min-w-[48px]" : ""
                       }`}
-                      style={{ height: `${height}%`, minHeight: collapsed ? 40 : 56 }}
                     >
-                      <span className="sr-only">{bucket.label}</span>
+                      {collapsed && <span className="sr-only">{bucket.label}</span>}
+                      {!collapsed && (
+                        <div className="flex items-center justify-between text-[11px] text-slate-300">
+                          <span className="font-semibold text-slate-100">{bucket.label}</span>
+                          <span>{bucket.count}</span>
+                        </div>
+                      )}
+                      <div className="mt-1 h-2 w-full rounded-full bg-slate-800">
+                        <div
+                          className="h-2 rounded-full transition-all"
+                          style={{ width: `${width}%`, background: color }}
+                        />
+                      </div>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="text-xs">
@@ -221,6 +242,12 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                 </Tooltip>
               );
             })}
+            {!collapsed && (
+              <div className="mt-3 flex items-center justify-between text-[10px] uppercase tracking-[0.08em] text-slate-500">
+                <span>0</span>
+                <span>Max {maxRangeCount}</span>
+              </div>
+            )}
           </div>
           {!collapsed && (
             <div className="mt-2 text-[11px] text-slate-400">
