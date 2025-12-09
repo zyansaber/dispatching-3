@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   fetchDispatchData,
   fetchDispatchingNoteData,
@@ -8,6 +9,7 @@ import {
   processDispatchData,
   processReallocationData,
   getDispatchStats,
+  filterDispatchData,
   subscribeDispatch,
   subscribeDispatchingNote,
   subscribeReallocation,
@@ -31,6 +33,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 
+export type SidebarFilter =
+  | { kind: "grRange"; label: string; min: number; max?: number | null };
+
 interface DashboardContextValue {
   dispatchRaw: DispatchData;
   reallocRaw: ReallocationData;
@@ -53,6 +58,8 @@ interface DashboardContextValue {
     data: Partial<TransportCompany>
   ) => Promise<void>;
   handleDeleteTransportCompany: (companyId: string) => Promise<void>;
+  sidebarFilter: SidebarFilter | null;
+  setSidebarFilter: (filter: SidebarFilter | null) => void;
 }
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
@@ -76,8 +83,66 @@ const IndexPage: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [transportCompanies, setTransportCompanies] = useState<TransportConfig>({});
+  const [sidebarFilter, setSidebarFilter] = useState<SidebarFilter | null>(null);
+
+  const navigate = useNavigate();
 
   const stats = useMemo(() => getDispatchStats(dispatchRaw, reallocRaw), [dispatchRaw, reallocRaw]);
+
+  const readyToDispatch = useMemo(
+    () => filterDispatchData(dispatchProcessed, "canBeDispatched", reallocRaw),
+    [dispatchProcessed, reallocRaw]
+  );
+
+  const onHoldStock = useMemo(
+    () => filterDispatchData(dispatchProcessed, "onHold", reallocRaw),
+    [dispatchProcessed, reallocRaw]
+  );
+
+  const stockEntries = useMemo(() => {
+    const merged = new Map<string, ProcessedDispatchEntry>();
+    [...readyToDispatch, ...onHoldStock].forEach((entry) => {
+      if (!entry["Chassis No"]) return;
+      merged.set(entry["Chassis No"], entry);
+    });
+
+    return Array.from(merged.values());
+  }, [onHoldStock, readyToDispatch]);
+
+  const bookedCount = useMemo(
+    () => stockEntries.filter((entry) => !!entry.EstimatedPickupAt).length,
+    [stockEntries]
+  );
+
+  const transportNoPOCount = useMemo(
+    () =>
+      stockEntries.filter(
+        (entry) => !!entry.EstimatedPickupAt && !entry["Matched PO No"]
+      ).length,
+    [stockEntries]
+  );
+
+  const grRanges = useMemo(() => {
+    const buckets = [
+      { label: "0-7 days", min: 0, max: 7 },
+      { label: "8-14", min: 8, max: 14 },
+      { label: "15-30", min: 15, max: 30 },
+      { label: "31-60", min: 31, max: 60 },
+      { label: "61+", min: 61, max: null },
+    ];
+
+    const counts = buckets.map((bucket) => {
+      const count = readyToDispatch.filter((entry) => {
+        const days = Number(entry["GR to GI Days"] ?? 0) || 0;
+        const withinMin = days >= bucket.min;
+        const withinMax = bucket.max == null ? true : days <= bucket.max;
+        return withinMin && withinMax;
+      }).length;
+      return { ...bucket, count };
+    });
+
+    return counts;
+  }, [readyToDispatch]);
 
   useEffect(() => {
     let unsubDispatch: (() => void) | null = null;
@@ -161,6 +226,11 @@ const IndexPage: React.FC = () => {
     });
   };
 
+  const handleSelectGRRange = (range: SidebarFilter | null) => {
+    setSidebarFilter(range);
+    navigate("/dispatch");
+  };
+
   const handleRefreshData = async () => {
     setRefreshing(true);
     try {
@@ -197,6 +267,8 @@ const IndexPage: React.FC = () => {
     handleRefreshData,
     handleSaveTransportCompany,
     handleDeleteTransportCompany,
+    sidebarFilter,
+    setSidebarFilter,
   };
 
   const sidebarColumn = sidebarCollapsed ? "80px" : "304px";
@@ -210,7 +282,13 @@ const IndexPage: React.FC = () => {
         <WorkspaceSidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((c) => !c)}
-          stats={stats}
+          stats={{
+            ...stats,
+            booked: bookedCount,
+            transportNoPO: transportNoPOCount,
+            grRanges,
+          }}
+          onSelectGRRange={handleSelectGRRange}
         />
 
         <div className="min-h-screen w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
