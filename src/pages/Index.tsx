@@ -110,7 +110,11 @@ const IndexPage: React.FC = () => {
   }, [onHoldStock, readyToDispatch]);
 
   const bookedCount = useMemo(
-    () => stockEntries.filter((entry) => !!entry.EstimatedPickupAt).length,
+    () =>
+      stockEntries.filter((entry) => {
+        const poNo = entry["Matched PO No"];
+        return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
+      }).length,
     [stockEntries]
   );
 
