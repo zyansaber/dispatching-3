@@ -47,15 +47,16 @@ interface DispatchStatsProps {
   invalidStock: number;
   snowyStock: number;
   canBeDispatched: number;
+  booked?: number;
   onHold?: number;
-  onFilterChange: (filter: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold') => void;
-  activeFilter?: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold';
+  onFilterChange: (filter: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked') => void;
+  activeFilter?: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked';
   onRefresh: () => void;
   refreshing?: boolean;
 }
 
 export const DispatchStats: React.FC<DispatchStatsProps> = ({
-  total, invalidStock, snowyStock, canBeDispatched, onHold,
+  total, invalidStock, snowyStock, canBeDispatched, onHold, booked,
   onFilterChange, activeFilter = "all", onRefresh, refreshing = false,
 }) => {
   const cards = [
@@ -63,6 +64,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
     { label: "Invalid", value: invalidStock, filter: "invalid" },
     { label: "Snowy Stock", value: snowyStock, filter: "snowy" },
     { label: "Can Dispatch", value: canBeDispatched, filter: "canBeDispatched" },
+    ...(booked !== undefined ? [{ label: "Booked", value: booked, filter: "booked" } as const] : []),
     ...(onHold !== undefined ? [{ label: "On Hold", value: onHold, filter: "onHold" } as const] : []),
   ] as const;
 
@@ -98,7 +100,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 /* ====================== 主表 ====================== */
 interface DispatchTableProps {
   allData: ProcessedDispatchEntry[];
-  activeFilter?: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold';
+  activeFilter?: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked';
   searchTerm: string;
   onSearchChange: (term: string) => void;
   reallocationData: ProcessedReallocationEntry[];
@@ -165,6 +167,10 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     let arr = baseMerged;
     if (activeFilter === "invalid")   arr = arr.filter(e => e.Statuscheck !== "OK");
     if (activeFilter === "onHold")    arr = arr.filter(e => e.OnHold === true);
+    if (activeFilter === "booked")    arr = arr.filter(e => {
+      const poNo = e["Matched PO No"];
+      return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
+    });
     if (activeFilter === "snowy")     arr = arr.filter(e => e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock");
     if (activeFilter === "canBeDispatched")
       arr = arr.filter(
@@ -545,6 +551,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
                   const commentValue = commentDraft[id] ?? (entry.Comment ?? "");
                   const pickupLocal  = pickupDraft[id]  ?? (entry.EstimatedPickupAt ? isoToLocal(entry.EstimatedPickupAt) : "");
+                  const hasComment = commentValue.trim().length > 0;
+                  const hasPickup = pickupLocal.length > 0;
 
                   return (
                     <React.Fragment key={id}>
@@ -632,7 +640,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-[13px] text-slate-600 w-28 shrink-0">Comment</span>
                               <Input
-                                className="w-full max-w-[320px]"
+                                className={`w-full max-w-[320px] ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                                 placeholder="Add a comment"
                                 value={commentValue}
                                 onChange={(e) => setCommentDraft((m) => ({ ...m, [id]: e.target.value }))}
@@ -648,7 +656,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                               <span className="text-[13px] text-slate-600 w-28 shrink-0">Pickup</span>
                               <input
                                 type="datetime-local"
-                                className="px-2 py-1 border rounded w-full max-w-[260px]"
+                                className={`px-2 py-1 border rounded w-full max-w-[260px] ${hasPickup ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                                 min={minLocalNow}
                                 value={pickupLocal}
                                 onChange={(e) => setPickupDraft((m) => ({ ...m, [id]: e.target.value }))}
@@ -674,8 +682,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                   entry.DealerCheck === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                 }`}
                                 title={`Dealer: ${entry.DealerCheck || "-"}`}
-                              >
-                                Dealer: {entry.DealerCheck || "-"}
                               </span>
                             </div>
 
@@ -759,6 +765,8 @@ const OnHoldBoard: React.FC<{
   handlers: {
     handleToggleOnHold: (row: ProcessedDispatchEntry, next: boolean) => Promise<void>;
     handleSaveComment: (row: ProcessedDispatchEntry) => Promise<void>;
+    handleToggleOnHold: (row: ProcessedDispatchEntry, next: boolean) => Promise<void>;
+    handleSaveComment: (row: ProcessedDispatchEntry) => Promise<void>;
     handleSavePickup: (row: ProcessedDispatchEntry) => Promise<void>;
   };
 }> = ({
@@ -782,6 +790,8 @@ const OnHoldBoard: React.FC<{
             const id = row["Chassis No"];
             const commentValue = commentDraft[id] ?? (row.Comment ?? "");
             const pickupLocal  = pickupDraft[id]  ?? (row.EstimatedPickupAt ? new Date(row.EstimatedPickupAt).toISOString().slice(0,16) : "");
+            const hasComment = commentValue.trim().length > 0;
+            const hasPickup = pickupLocal.length > 0;
             return (
               <div key={id} className={`h-full min-h-[260px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
                 <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
@@ -812,7 +822,7 @@ const OnHoldBoard: React.FC<{
                 <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
                   <div className="flex items-center gap-2">
                     <Input
-                      className="w-full"
+                      className={`w-full ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                       placeholder="Add a comment"
                       value={commentValue}
                       onChange={(e) => setCommentDraft((m) => ({ ...m, [id]: e.target.value }))}
@@ -826,7 +836,7 @@ const OnHoldBoard: React.FC<{
                   <div className="flex items-center gap-2">
                     <input
                       type="datetime-local"
-                      className="px-2 py-1 border rounded w-full"
+                      className={`px-2 py-1 border rounded w-full ${hasPickup ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                       min={new Date().toISOString().slice(0,16)}
                       value={pickupLocal}
                       onChange={(e) => setPickupDraft((m) => ({ ...m, [id]: e.target.value }))}
