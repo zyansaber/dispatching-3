@@ -164,7 +164,7 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-1">
                     <div className="text-xl font-semibold text-white">{totals.booked}</div>
-                    <p className="mt-1 text-[11px] text-slate-400">Transport time set</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Matched PO No received</p>
                   </CardContent>
                 </Card>
                 <Card className="border border-slate-800 bg-slate-900/80 shadow-inner sm:col-span-2">
