@@ -346,6 +346,10 @@ export const getDispatchStats = (
   const okStatus = entries.filter((e) => e.Statuscheck === "OK").length;
   const invalidStock = entries.filter((e) => e.Statuscheck !== "OK").length;
   const onHold = entries.filter((e) => e.OnHold === true).length;
+  const booked = entries.filter((e) => {
+    const poNo = e["Matched PO No"];
+    return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
+  }).length;
 
   const chassisToReallocatedTo = new Map<string, string>();
   Object.entries(reallocationData).forEach(([chassisNumber, entryObj]) => {
@@ -386,6 +390,7 @@ export const getDispatchStats = (
     snowyStock,
     canBeDispatched,
     onHold,
+    booked,
   };
 };
 
