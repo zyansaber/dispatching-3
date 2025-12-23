@@ -1,6 +1,3 @@
-+19
--2
-
 import React, { useEffect, useState } from "react";
 import { DispatchStats, DispatchTable } from "@/components/DataTables";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +18,7 @@ const DispatchPage: React.FC = () => {
     setSidebarFilter,
   } = useDashboardContext();
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "invalid" | "snowy" | "canBeDispatched" | "onHold">(
+  const [activeFilter, setActiveFilter] = useState<"all" | "invalid" | "snowy" | "canBeDispatched" | "onHold" | "booked">(
     "all"
   );
 
@@ -48,6 +45,7 @@ const DispatchPage: React.FC = () => {
         snowyStock={stats.snowyStock}
         canBeDispatched={stats.canBeDispatched}
         onHold={stats.onHold}
+        booked={stats.booked}
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
         onRefresh={handleRefreshData}
