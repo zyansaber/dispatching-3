@@ -682,6 +682,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                   entry.DealerCheck === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                 }`}
                                 title={`Dealer: ${entry.DealerCheck || "-"}`}
+                              >
+                                Dealer: {entry.DealerCheck || "-"}
                               </span>
                             </div>
 
@@ -763,8 +765,6 @@ const OnHoldBoard: React.FC<{
   setCommentDraft: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   setPickupDraft: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   handlers: {
-    handleToggleOnHold: (row: ProcessedDispatchEntry, next: boolean) => Promise<void>;
-    handleSaveComment: (row: ProcessedDispatchEntry) => Promise<void>;
     handleToggleOnHold: (row: ProcessedDispatchEntry, next: boolean) => Promise<void>;
     handleSaveComment: (row: ProcessedDispatchEntry) => Promise<void>;
     handleSavePickup: (row: ProcessedDispatchEntry) => Promise<void>;
