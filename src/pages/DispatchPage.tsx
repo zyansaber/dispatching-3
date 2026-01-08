@@ -40,13 +40,9 @@ const DispatchPage: React.FC = () => {
       </div>
 
       <DispatchStats
-        total={stats.total}
         wrongStatus={stats.wrongStatus}
         noReference={stats.noReference}
-        snowyStock={stats.snowyStock}
-        canBeDispatched={stats.canBeDispatched}
         onHold={stats.onHold}
-        booked={stats.booked}
         temporaryLeavingWithoutPGI={stats.temporaryLeavingWithoutPGI}
         invalidStock={stats.invalidStock}
         activeFilter={activeFilter}
