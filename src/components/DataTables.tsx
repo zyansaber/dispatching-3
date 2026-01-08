@@ -57,40 +57,49 @@ interface DispatchStatsProps {
   canBeDispatched: number;
   booked?: number;
   onHold?: number;
-  onFilterChange: (filter: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked') => void;
-  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked';
+  temporaryLeavingWithoutPGI?: number;
+  onFilterChange: (filter: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving') => void;
+  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving';
   onRefresh: () => void;
   refreshing?: boolean;
 }
 
 export const DispatchStats: React.FC<DispatchStatsProps> = ({
   total, wrongStatus, noReference, snowyStock, canBeDispatched, onHold, booked,
-  onFilterChange, activeFilter = "all", onRefresh, refreshing = false,
+  temporaryLeavingWithoutPGI, onFilterChange, activeFilter = "all", onRefresh, refreshing = false,
 }) => {
   const waitingForBooking = canBeDispatched + wrongStatus + noReference;
-  const cards = [
+  const topCards = [
+    { label: "Ready for dispatch", value: canBeDispatched, filter: "canBeDispatched" },
     { label: "Total", value: total, filter: "all" },
     { label: "Snowy Stock", value: snowyStock, filter: "snowy" },
-    {
-      label: "Waiting for booking transport",
-      value: waitingForBooking,
-      filter: "canBeDispatched",
-    },
+    { label: "Waiting for booking transport", value: waitingForBooking, filter: "canBeDispatched" },
     ...(booked !== undefined ? [{ label: "Booked", value: booked, filter: "booked" } as const] : []),
-    ...(onHold !== undefined ? [{ label: "On Hold", value: onHold, filter: "onHold" } as const] : []),
   ] as const;
   const otherCards = [
-    {
-      label: "Wrong status in CMS",
-      value: wrongStatus,
-      filter: "wrongStatus",
-      className: "border-rose-200 bg-rose-50/60",
-    },
+    ...(onHold !== undefined ? [{ label: "On Hold", value: onHold, filter: "onHold" } as const] : []),
+    ...(temporaryLeavingWithoutPGI !== undefined
+      ? [
+          {
+            label: "Temporary Leaving without PGI",
+            value: temporaryLeavingWithoutPGI,
+            filter: "temporaryLeaving",
+          } as const,
+        ]
+      : []),
+  ] as const;
+  const dataIssueCards = [
     {
       label: "Not found in the planning schedule",
       value: noReference,
       filter: "noReference",
       className: "border-amber-200 bg-amber-50/70",
+    },
+    {
+      label: "Wrong status in CMS",
+      value: wrongStatus,
+      filter: "wrongStatus",
+      className: "border-rose-200 bg-rose-50/60",
     },
   ] as const;
 
@@ -98,7 +107,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
     <div className="space-y-4 w-full max-w-full overflow-x-hidden">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          {cards.map((card) => (
+          {topCards.map((card) => (
             <Card
               key={card.filter}
               className={`cursor-pointer transition hover:shadow-sm ${activeFilter === card.filter ? "ring-2 ring-blue-500" : ""}`}
@@ -126,6 +135,29 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
           {otherCards.map((card) => (
             <Card
+              key={card.label}
+              className={`cursor-pointer border transition hover:shadow-sm ${
+                activeFilter === card.filter ? "ring-2 ring-blue-500" : ""
+              }`}
+              onClick={() => onFilterChange(card.filter as any)}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[13px] font-medium text-slate-600 truncate">{card.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Data issue
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
+          {dataIssueCards.map((card) => (
+            <Card
               key={card.filter}
               className={`cursor-pointer border transition hover:shadow-sm ${card.className} ${
                 activeFilter === card.filter ? "ring-2 ring-blue-500" : ""
@@ -149,7 +181,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 /* ====================== 主表 ====================== */
 interface DispatchTableProps {
   allData: ProcessedDispatchEntry[];
-  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked';
+  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving';
   searchTerm: string;
   onSearchChange: (term: string) => void;
   reallocationData: ProcessedReallocationEntry[];
@@ -189,7 +221,13 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         const inSync =
           (p.OnHold === undefined || p.OnHold === base.OnHold) &&
           (p.Comment === undefined || p.Comment === base.Comment) &&
-          (p.EstimatedPickupAt === undefined || p.EstimatedPickupAt === base.EstimatedPickupAt);
+          (p.EstimatedPickupAt === undefined || p.EstimatedPickupAt === base.EstimatedPickupAt) &&
+          (p.TemporaryLeavingWithoutPGI === undefined ||
+            p.TemporaryLeavingWithoutPGI === base.TemporaryLeavingWithoutPGI) &&
+          (p.TemporaryLeavingWithoutPGIAt === undefined ||
+            p.TemporaryLeavingWithoutPGIAt === base.TemporaryLeavingWithoutPGIAt) &&
+          (p.TemporaryLeavingWithoutPGIBy === undefined ||
+            p.TemporaryLeavingWithoutPGIBy === base.TemporaryLeavingWithoutPGIBy);
         if (inSync) delete next[id];
       }
       return next;
@@ -227,6 +265,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
       );
     if (activeFilter === "onHold")    arr = arr.filter(e => e.OnHold === true);
+    if (activeFilter === "temporaryLeaving") arr = arr.filter(e => e.TemporaryLeavingWithoutPGI === true);
     if (activeFilter === "booked")    arr = arr.filter(e => {
       const poNo = e["Matched PO No"];
       return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
@@ -239,6 +278,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             getStatusCheckCategory(e.Statuscheck) === "wrongStatus" ||
             getStatusCheckCategory(e.Statuscheck) === "noReference") &&
           !e.OnHold &&
+          !e.TemporaryLeavingWithoutPGI &&
           !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock")
       );
 
@@ -293,8 +333,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     return arr;
   }, [baseMerged, searchTerm, activeFilter, sortConfig, reallocationData, grRangeFilter]);
 
-  const activeRows = filtered.filter(e => !e.OnHold);
+  const activeRows = filtered.filter(e => !e.OnHold && !e.TemporaryLeavingWithoutPGI);
   const onHoldRows = filtered.filter(e =>  e.OnHold);
+  const temporaryLeavingRows = filtered.filter(e => e.TemporaryLeavingWithoutPGI);
 
   const maxGRDays = Math.max(...baseMerged.map(e => e["GR to GI Days"] || 0), 1);
 
@@ -318,17 +359,85 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
   const handleToggleOnHold = async (row: ProcessedDispatchEntry, next: boolean) => {
     const id = getRowKey(row);
-    const patch = { OnHold: next, OnHoldAt: new Date().toISOString(), OnHoldBy: "webapp" as const };
+    const patch = {
+      OnHold: next,
+      OnHoldAt: next ? new Date().toISOString() : null,
+      OnHoldBy: next ? ("webapp" as const) : null,
+      ...(next
+        ? {
+            TemporaryLeavingWithoutPGI: false,
+            TemporaryLeavingWithoutPGIAt: null,
+            TemporaryLeavingWithoutPGIBy: null,
+          }
+        : {}),
+    };
     applyOptimistic(id, patch);
     setSaving(s => ({ ...s, [id]: true }));
     setError(e => ({ ...e, [id]: undefined }));
     try {
       await patchDispatch(id, patch);
     } catch (err: any) {
-      setOptimistic(m => { const prev = { ...(m[id] || {}) }; delete prev.OnHold; delete prev.OnHoldAt; delete prev.OnHoldBy; return { ...m, [id]: prev }; });
+      setOptimistic(m => {
+        const prev = { ...(m[id] || {}) };
+        delete prev.OnHold;
+        delete prev.OnHoldAt;
+        delete prev.OnHoldBy;
+        delete prev.TemporaryLeavingWithoutPGI;
+        delete prev.TemporaryLeavingWithoutPGIAt;
+        delete prev.TemporaryLeavingWithoutPGIBy;
+        return { ...m, [id]: prev };
+      });
       setError(e => ({ ...e, [id]: err?.message || "Update failed" }));
     } finally {
       setSaving(s => ({ ...s, [id]: false }));
+    }
+  };
+
+  const handleToggleTemporaryLeaving = async (row: ProcessedDispatchEntry, next: boolean) => {
+    const id = getRowKey(row);
+    let comment = row.Comment ?? "";
+    if (next) {
+      const promptValue = window.prompt(
+        "Please enter a comment for temporary leaving without PGI.",
+        comment
+      );
+      if (promptValue == null) return;
+      comment = promptValue.trim();
+      if (!comment) {
+        toast.error("Comment is required for temporary leaving without PGI.");
+        return;
+      }
+    }
+    const patch: Partial<ProcessedDispatchEntry> = {
+      TemporaryLeavingWithoutPGI: next,
+      TemporaryLeavingWithoutPGIAt: next ? new Date().toISOString() : null,
+      TemporaryLeavingWithoutPGIBy: next ? ("webapp" as const) : null,
+      ...(next ? { Comment: comment } : {}),
+      ...(next
+        ? {
+            OnHold: false,
+            OnHoldAt: null,
+            OnHoldBy: null,
+          }
+        : {}),
+    };
+    applyOptimistic(id, patch);
+    setSaving((s) => ({ ...s, [id]: true }));
+    setError((e) => ({ ...e, [id]: undefined }));
+    try {
+      await patchDispatch(id, patch);
+    } catch (err: any) {
+      setOptimistic((m) => {
+        const prev = { ...(m[id] || {}) };
+        delete prev.TemporaryLeavingWithoutPGI;
+        delete prev.TemporaryLeavingWithoutPGIAt;
+        delete prev.TemporaryLeavingWithoutPGIBy;
+        if (next) delete prev.Comment;
+        return { ...m, [id]: prev };
+      });
+      setError((e) => ({ ...e, [id]: err?.message || "Update failed" }));
+    } finally {
+      setSaving((s) => ({ ...s, [id]: false }));
     }
   };
 
@@ -465,6 +574,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     "Transport Company": e.TransportCompany ?? "",
     "Transport Dealer": e.TransportDealer ?? "",
     "On Hold": e.OnHold ? "Yes" : "No",
+    "Temporary Leaving without PGI": e.TemporaryLeavingWithoutPGI ? "Yes" : "No",
     Status: getStatusCheckLabel(e.Statuscheck),
     Dealer: e.DealerCheck ?? "",
     Reallocation: e.reallocatedTo ?? "",
@@ -549,7 +659,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Scheduled Dealer</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Matched PO No</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Transport</TableCell>
-      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 text-center ${CELL_VDIV}`}>Status</TableCell>
+      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 text-center ${CELL_VDIV}`}>Action</TableCell>
     </TableRow>
   );
 
@@ -600,7 +710,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   <SortableHeader sortKey="Matched PO No">Matched PO No</SortableHeader>
                   <SortableHeader sortKey="TransportCompany">Transport</SortableHeader>
                   <TableHead className={`text-center align-top pt-3 font-medium text-slate-800 ${CELL_VDIV}`}>
-                    Status
+                    Action
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -686,14 +796,24 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         </TableCell>
 
                         <TableCell className={`${CELL_VDIV} text-center`}>
-                          <Button
-                            size="sm"
-                            className={entry.OnHold ? "bg-red-600 text-white" : "bg-emerald-600 text-white"}
-                            disabled={saving[rowKey]}
-                            onClick={() => handleToggleOnHold(entry, !entry.OnHold)}
-                          >
-                            {entry.OnHold ? "On Hold" : "Ready"}
-                          </Button>
+                          <div className="flex flex-col items-center gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-red-600 text-white"
+                              disabled={saving[rowKey]}
+                              onClick={() => handleToggleOnHold(entry, true)}
+                            >
+                              On Hold
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={saving[rowKey]}
+                              onClick={() => handleToggleTemporaryLeaving(entry, true)}
+                            >
+                              Temporary Leaving without PGI
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
 
@@ -817,6 +937,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         setPickupDraft={setPickupDraft}
         handlers={{ handleToggleOnHold, handleSaveComment, handleSavePickup }}
       />
+
+      <TemporaryLeavingBoard
+        rows={temporaryLeavingRows}
+        saving={saving}
+        error={error}
+        commentDraft={commentDraft}
+        setCommentDraft={setCommentDraft}
+        handlers={{ handleToggleTemporaryLeaving, handleSaveComment }}
+      />
     </div>
   );
 };
@@ -913,6 +1042,88 @@ const OnHoldBoard: React.FC<{
                     </Button>
                   </div>
 
+                  {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+/* ====================== Temporary Leaving without PGI 卡片 ====================== */
+const TemporaryLeavingBoard: React.FC<{
+  rows: ProcessedDispatchEntry[];
+  saving: Record<string, boolean>;
+  error: Record<string, string | undefined>;
+  commentDraft: Record<string, string>;
+  setCommentDraft: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  handlers: {
+    handleToggleTemporaryLeaving: (row: ProcessedDispatchEntry, next: boolean) => Promise<void>;
+    handleSaveComment: (row: ProcessedDispatchEntry) => Promise<void>;
+  };
+}> = ({ rows, saving, error, commentDraft, setCommentDraft, handlers }) => {
+  if (!rows.length) return null;
+  return (
+    <Card className="w-full max-w-full">
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-5 bg-amber-500 rounded" />
+          <CardTitle className="text-base font-semibold text-slate-900">Temporary Leaving without PGI</CardTitle>
+          <div className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+            {rows.length} Items
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 items-stretch w-full max-w-full">
+          {rows.map((row, idx) => {
+            const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
+            const chassisNo = row["Chassis No"] || rowKey;
+            const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
+            const hasComment = commentValue.trim().length > 0;
+            return (
+              <div key={rowKey} className={`h-full min-h-[240px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
+                <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
+                  <div className="font-medium text-sm text-slate-900 break-all">{chassisNo}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                      Temporary Leaving
+                    </span>
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 text-white"
+                      disabled={saving[rowKey]}
+                      onClick={() => handlers.handleToggleTemporaryLeaving(row, false)}
+                    >
+                      Mark Ready
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-2 text-sm space-y-1.5 flex-1">
+                  <div className={CELL}><span className="text-slate-500">Customer: </span>{row.Customer || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Model: </span>{row.Model || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Transport: </span>{row.TransportCompany || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Dealer: </span>{row.TransportDealer || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Matched PO: </span>{row["Matched PO No"] || "-"}</div>
+                </div>
+
+                <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className={`w-full ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                      placeholder="Add a comment"
+                      value={commentValue}
+                      onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
+                    />
+                    <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
+                      Save
+                    </Button>
+                  </div>
                   {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
                 </div>
               </div>

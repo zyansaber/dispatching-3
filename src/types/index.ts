@@ -36,6 +36,11 @@ export interface DispatchEntry {
   OnHoldAt?: string | null;   // ISO 字符串
   OnHoldBy?: string | null;
 
+  /** ✅ 新增：Temporary leaving without PGI 状态 */
+  TemporaryLeavingWithoutPGI?: boolean;
+  TemporaryLeavingWithoutPGIAt?: string | null;
+  TemporaryLeavingWithoutPGIBy?: string | null;
+
   /** ✅ 新增：可编辑备注（后加字段：可缺省） */
   Comment?: string | null;
 
