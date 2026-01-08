@@ -134,7 +134,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
         <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
           Other
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
+        <div className="grid grid-cols-3 gap-3">
           {otherCards.map((card) => (
             <Card
               key={card.label}
