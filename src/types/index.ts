@@ -46,6 +46,7 @@ export interface DispatchEntry {
 /** 处理后的 Dispatch 项（在前端注入 reallocatedTo 等） */
 export interface ProcessedDispatchEntry extends DispatchEntry {
   reallocatedTo?: string;
+  dispatchKey?: string;
 }
 
 /** ----------------------------

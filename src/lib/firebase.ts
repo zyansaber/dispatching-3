@@ -338,8 +338,9 @@ export const processDispatchData = (
       reallocatedTo
     );
     processed.push({
-      "Chassis No": entry["Chassis No"] || chassisNo, // 注入主键，防止库里没存该字段时报错
       ...entry,
+      "Chassis No": entry["Chassis No"] || chassisNo, // 注入主键，防止库里没存该字段时报错
+      dispatchKey: chassisNo,
       DealerCheck: validatedDealerCheck,
       ...(reallocatedTo ? { reallocatedTo } : {}),
     });
