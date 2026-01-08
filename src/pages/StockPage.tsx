@@ -3,62 +3,109 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { filterDispatchData } from "@/lib/firebase";
+import { getStatusCheckCategory } from "@/lib/firebase";
 import { ProcessedDispatchEntry } from "@/types";
 import { useDashboardContext } from "./Index";
 
 const StockPage: React.FC = () => {
-  const { dispatchProcessed, reallocRaw } = useDashboardContext();
+  const { dispatchProcessed } = useDashboardContext();
   const [activeFilter, setActiveFilter] = useState<"all" | "booked" | "transportNoPO">("all");
 
-  const readyToDispatch = useMemo(
-    () => filterDispatchData(dispatchProcessed, "canBeDispatched", reallocRaw),
-    [dispatchProcessed, reallocRaw]
+  const allEntries = useMemo(
+    () =>
+      [...dispatchProcessed].sort((a, b) =>
+        (a["Chassis No"] || "").localeCompare(b["Chassis No"] || "")
+      ),
+    [dispatchProcessed]
   );
-
-  const onHoldStock = useMemo(
-    () => filterDispatchData(dispatchProcessed, "onHold", reallocRaw),
-    [dispatchProcessed, reallocRaw]
-  );
-
-  const stockEntries = useMemo(() => {
-    const merged = new Map<string, ProcessedDispatchEntry>();
-    [...readyToDispatch, ...onHoldStock].forEach((entry) => {
-      if (!entry["Chassis No"]) return;
-      merged.set(entry["Chassis No"], entry);
-    });
-
-    return Array.from(merged.values()).sort((a, b) =>
-      (a["Chassis No"] || "").localeCompare(b["Chassis No"] || "")
-    );
-  }, [onHoldStock, readyToDispatch]);
 
   const bookedCount = useMemo(
-    () => stockEntries.filter((entry) => !!entry.EstimatedPickupAt).length,
-    [stockEntries]
+    () => allEntries.filter((entry) => !!entry.EstimatedPickupAt).length,
+    [allEntries]
   );
 
   const transportNoPOCount = useMemo(
     () =>
-      stockEntries.filter(
+      allEntries.filter(
         (entry) => !!entry.EstimatedPickupAt && !entry["Matched PO No"]
       ).length,
-    [stockEntries]
+    [allEntries]
   );
 
   const filteredEntries = useMemo(() => {
     if (activeFilter === "booked") {
-      return stockEntries.filter((entry) => !!entry.EstimatedPickupAt);
+      return allEntries.filter((entry) => !!entry.EstimatedPickupAt);
     }
 
     if (activeFilter === "transportNoPO") {
-      return stockEntries.filter(
+      return allEntries.filter(
         (entry) => !!entry.EstimatedPickupAt && !entry["Matched PO No"]
       );
     }
 
-    return stockEntries;
-  }, [activeFilter, stockEntries]);
+    return allEntries;
+  }, [activeFilter, allEntries]);
+
+  const getStatusMeta = (entry: ProcessedDispatchEntry) => {
+    const statusCategory = getStatusCheckCategory(entry.Statuscheck);
+    const isSnowyStock =
+      entry.reallocatedTo === "Snowy Stock" ||
+      entry["Scheduled Dealer"] === "Snowy Stock";
+
+    if (statusCategory === "wrongStatus") {
+      return {
+        label: "Wrong status",
+        badgeClass: "border-rose-300 bg-rose-50 text-rose-700",
+        rowClass: "border-l-4 border-rose-300 bg-rose-50/20",
+      };
+    }
+
+    if (statusCategory === "noReference") {
+      return {
+        label: "Old van",
+        badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
+        rowClass: "bg-slate-50",
+      };
+    }
+
+    if (isSnowyStock) {
+      return {
+        label: "Snowy stock",
+        badgeClass: "border-sky-300 bg-sky-50 text-sky-700",
+        rowClass: "bg-sky-50/70",
+      };
+    }
+
+    if (entry.OnHold) {
+      return {
+        label: "On hold",
+        badgeClass: "border-amber-300 bg-amber-50 text-amber-700",
+        rowClass: "bg-amber-50/70",
+      };
+    }
+
+    if (entry.EstimatedPickupAt) {
+      return {
+        label: "Booked",
+        badgeClass: "border-violet-300 bg-violet-50 text-violet-700",
+        rowClass: "bg-violet-50/70",
+      };
+    }
+
+    if (statusCategory === "ok") {
+      return {
+        label: "Can dispatch",
+        badgeClass: "border-emerald-300 bg-emerald-50 text-emerald-700",
+        rowClass: "bg-emerald-50/70",
+      };
+    }
+
+    return {
+      label: "Unknown",
+      badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
+      rowClass: "",
+    };
+  };
 
   const formatPickup = (value?: string | null) => {
     if (!value) return "-";
@@ -74,10 +121,10 @@ const StockPage: React.FC = () => {
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle className="text-lg">Stock Sheet</CardTitle>
-              <CardDescription>Vehicles that can dispatch right now or are on hold.</CardDescription>
+              <CardDescription>All chassis with live dispatch status highlights.</CardDescription>
             </div>
             <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold">
-              {stockEntries.length} listed
+              {allEntries.length} listed
             </Badge>
           </div>
         </CardHeader>
@@ -91,7 +138,7 @@ const StockPage: React.FC = () => {
             >
               <span>All</span>
               <Badge variant={activeFilter === "all" ? "secondary" : "outline"} className="px-2">
-                {stockEntries.length}
+                {allEntries.length}
               </Badge>
             </Button>
             <Button
@@ -134,29 +181,26 @@ const StockPage: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEntries.map((entry) => (
-                  <TableRow key={entry["Chassis No"]}>
-                    <TableCell className="font-medium">{entry["Chassis No"] || "-"}</TableCell>
-                    <TableCell>{entry.Model || "-"}</TableCell>
-                    <TableCell>{entry["Scheduled Dealer"] || "-"}</TableCell>
-                    <TableCell>{entry.reallocatedTo || "-"}</TableCell>
-                    <TableCell>{entry.TransportCompany || "-"}</TableCell>
-                    <TableCell>{formatPickup(entry.EstimatedPickupAt)}</TableCell>
-                    <TableCell>{entry["Matched PO No"] || "-"}</TableCell>
-                    <TableCell>{entry.Customer || "-"}</TableCell>
-                    <TableCell>
-                      {entry.OnHold ? (
-                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
-                          On hold
+                {filteredEntries.map((entry) => {
+                  const statusMeta = getStatusMeta(entry);
+                  return (
+                    <TableRow key={entry["Chassis No"]} className={statusMeta.rowClass}>
+                      <TableCell className="font-medium">{entry["Chassis No"] || "-"}</TableCell>
+                      <TableCell>{entry.Model || "-"}</TableCell>
+                      <TableCell>{entry["Scheduled Dealer"] || "-"}</TableCell>
+                      <TableCell>{entry.reallocatedTo || "-"}</TableCell>
+                      <TableCell>{entry.TransportCompany || "-"}</TableCell>
+                      <TableCell>{formatPickup(entry.EstimatedPickupAt)}</TableCell>
+                      <TableCell>{entry["Matched PO No"] || "-"}</TableCell>
+                      <TableCell>{entry.Customer || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={statusMeta.badgeClass}>
+                          {statusMeta.label}
                         </Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-700">
-                          Can dispatch
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
                 {!filteredEntries.length && (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center text-sm text-muted-foreground">
