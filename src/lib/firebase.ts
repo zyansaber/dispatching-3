@@ -282,6 +282,31 @@ export const validateDealerCheck = (
   return "Mismatch";
 };
 
+export type StatusCheckCategory = "ok" | "wrongStatus" | "noReference" | "invalid";
+
+const normalizeStatusCheck = (status?: string | null) =>
+  (status ?? "").trim().toLowerCase();
+
+export const getStatusCheckCategory = (
+  status?: string | null
+): StatusCheckCategory => {
+  const normalized = normalizeStatusCheck(status);
+  if (!normalized || normalized === "ok") return "ok";
+  if (normalized === "invalid stock") return "wrongStatus";
+  if (normalized === "no reference" || normalized === "no referencenn")
+    return "noReference";
+  return "invalid";
+};
+
+export const getStatusCheckLabel = (status?: string | null): string => {
+  const normalized = normalizeStatusCheck(status);
+  if (!normalized || normalized === "ok") return "OK";
+  if (normalized === "invalid stock") return "Wrong status in CMS";
+  if (normalized === "no reference" || normalized === "no referencenn")
+    return "Not found in the planning schedule";
+  return status?.toString().trim() || "-";
+};
+
 export const processDispatchData = (
   dispatchData: DispatchData,
   reallocationData: ReallocationData
@@ -344,7 +369,12 @@ export const getDispatchStats = (
   const entries = Object.values(dispatchData);
   const total = entries.length;
   const okStatus = entries.filter((e) => e.Statuscheck === "OK").length;
-  const invalidStock = entries.filter((e) => e.Statuscheck !== "OK").length;
+  const wrongStatus = entries.filter(
+    (e) => getStatusCheckCategory(e.Statuscheck) === "wrongStatus"
+  ).length;
+  const noReference = entries.filter(
+    (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
+  ).length;
   const onHold = entries.filter((e) => e.OnHold === true).length;
   const booked = entries.filter((e) => {
     const poNo = e["Matched PO No"];
@@ -386,7 +416,8 @@ export const getDispatchStats = (
   return {
     total,
     okStatus,
-    invalidStock,
+    wrongStatus,
+    noReference,
     snowyStock,
     canBeDispatched,
     onHold,
@@ -400,7 +431,14 @@ export const filterDispatchData = (
   reallocationData: ReallocationData
 ): ProcessedDispatchEntry[] => {
   if (filter === "all") return data;
-  if (filter === "invalid") return data.filter((e) => e.Statuscheck !== "OK");
+  if (filter === "wrongStatus")
+    return data.filter(
+      (e) => getStatusCheckCategory(e.Statuscheck) === "wrongStatus"
+    );
+  if (filter === "noReference")
+    return data.filter(
+      (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
+    );
   if (filter === "onHold") return data.filter((e) => e.OnHold === true);
 
   const chassisToReallocatedTo = new Map<string, string>();
