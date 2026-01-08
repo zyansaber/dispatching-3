@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown, AlertTriangle, Mail, Download, RotateCw } from "lucide-react";
+import { ArrowUpDown, AlertTriangle, Mail, Download } from "lucide-react";
 import { ProcessedDispatchEntry, ProcessedReallocationEntry, TransportConfig } from "@/types";
 import {
   getGRDaysColor,
@@ -31,9 +31,9 @@ const COLS = [
   { key: "GR to GI Days",    w: 90  },
   { key: "Customer",         w: 160 },
   { key: "Model",            w: 120 },
-  { key: "SAP Data",         w: 170 },
-  { key: "Scheduled Dealer", w: 170 },
-  { key: "Matched PO No",    w: 170 },
+  { key: "SAP Data",         w: 150 },
+  { key: "Scheduled Dealer", w: 150 },
+  { key: "Matched PO No",    w: 150 },
   { key: "Transport",        w: 180 },
   { key: "Status",           w: 110 },
 ];
@@ -58,22 +58,20 @@ interface DispatchStatsProps {
   booked?: number;
   onHold?: number;
   temporaryLeavingWithoutPGI?: number;
-  onFilterChange: (filter: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving') => void;
-  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving';
-  onRefresh: () => void;
-  refreshing?: boolean;
+  invalidStock?: number;
+  onFilterChange: (filter: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock') => void;
+  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock';
 }
 
 export const DispatchStats: React.FC<DispatchStatsProps> = ({
   total, wrongStatus, noReference, snowyStock, canBeDispatched, onHold, booked,
-  temporaryLeavingWithoutPGI, onFilterChange, activeFilter = "all", onRefresh, refreshing = false,
+  temporaryLeavingWithoutPGI, invalidStock, onFilterChange, activeFilter = "all",
 }) => {
   const waitingForBooking = canBeDispatched + wrongStatus + noReference;
   const topCards = [
-    { label: "Ready for dispatch", value: canBeDispatched, filter: "canBeDispatched" },
     { label: "Total", value: total, filter: "all" },
-    { label: "Snowy Stock", value: snowyStock, filter: "snowy" },
     { label: "Waiting for booking transport", value: waitingForBooking, filter: "canBeDispatched" },
+    { label: "Snowy Stock", value: snowyStock, filter: "snowy" },
     ...(booked !== undefined ? [{ label: "Booked", value: booked, filter: "booked" } as const] : []),
   ] as const;
   const otherCards = [
@@ -84,6 +82,15 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
             label: "Temporary Leaving without PGI",
             value: temporaryLeavingWithoutPGI,
             filter: "temporaryLeaving",
+          } as const,
+        ]
+      : []),
+    ...(invalidStock !== undefined
+      ? [
+          {
+            label: "Invalid stock (to be confirmed)",
+            value: invalidStock,
+            filter: "invalidStock",
           } as const,
         ]
       : []),
@@ -105,8 +112,8 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 
   return (
     <div className="space-y-4 w-full max-w-full overflow-x-hidden">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+      <div className="flex flex-col gap-3">
+        <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {topCards.map((card) => (
             <Card
               key={card.filter}
@@ -114,7 +121,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
               onClick={() => onFilterChange(card.filter as any)}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-[13px] font-medium text-slate-600 truncate">{card.label}</CardTitle>
+                <CardTitle className="text-sm font-medium text-slate-600 truncate">{card.label}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
@@ -122,14 +129,9 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
             </Card>
           ))}
         </div>
-
-        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onRefresh} disabled={refreshing}>
-          <RotateCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-          {refreshing ? "Refreshing..." : "Refresh"}
-        </Button>
       </div>
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
           Other
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
@@ -142,7 +144,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
               onClick={() => onFilterChange(card.filter as any)}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-[13px] font-medium text-slate-600 truncate">{card.label}</CardTitle>
+                <CardTitle className="text-sm font-medium text-slate-600 truncate">{card.label}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
@@ -152,7 +154,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
         </div>
       </div>
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
           Data issue
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
@@ -165,7 +167,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
               onClick={() => onFilterChange(card.filter as any)}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-[13px] font-medium text-slate-600 truncate">{card.label}</CardTitle>
+                <CardTitle className="text-sm font-medium text-slate-600 truncate">{card.label}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
@@ -181,7 +183,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 /* ====================== 主表 ====================== */
 interface DispatchTableProps {
   allData: ProcessedDispatchEntry[];
-  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving';
+  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock';
   searchTerm: string;
   onSearchChange: (term: string) => void;
   reallocationData: ProcessedReallocationEntry[];
@@ -227,7 +229,10 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           (p.TemporaryLeavingWithoutPGIAt === undefined ||
             p.TemporaryLeavingWithoutPGIAt === base.TemporaryLeavingWithoutPGIAt) &&
           (p.TemporaryLeavingWithoutPGIBy === undefined ||
-            p.TemporaryLeavingWithoutPGIBy === base.TemporaryLeavingWithoutPGIBy);
+            p.TemporaryLeavingWithoutPGIBy === base.TemporaryLeavingWithoutPGIBy) &&
+          (p.InvalidStock === undefined || p.InvalidStock === base.InvalidStock) &&
+          (p.InvalidStockAt === undefined || p.InvalidStockAt === base.InvalidStockAt) &&
+          (p.InvalidStockBy === undefined || p.InvalidStockBy === base.InvalidStockBy);
         if (inSync) delete next[id];
       }
       return next;
@@ -266,11 +271,25 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       );
     if (activeFilter === "onHold")    arr = arr.filter(e => e.OnHold === true);
     if (activeFilter === "temporaryLeaving") arr = arr.filter(e => e.TemporaryLeavingWithoutPGI === true);
+    if (activeFilter === "invalidStock") arr = arr.filter(e => e.InvalidStock === true);
     if (activeFilter === "booked")    arr = arr.filter(e => {
       const poNo = e["Matched PO No"];
-      return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
+      return (
+        !e.OnHold &&
+        !e.TemporaryLeavingWithoutPGI &&
+        !e.InvalidStock &&
+        (typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo))
+      );
     });
-    if (activeFilter === "snowy")     arr = arr.filter(e => e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock");
+    if (activeFilter === "snowy")
+      arr = arr.filter(
+        (e) =>
+          !e.OnHold &&
+          !e.TemporaryLeavingWithoutPGI &&
+          !e.InvalidStock &&
+          (e.reallocatedTo === "Snowy Stock" ||
+            e["Scheduled Dealer"] === "Snowy Stock")
+      );
     if (activeFilter === "canBeDispatched")
       arr = arr.filter(
         (e) =>
@@ -279,6 +298,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             getStatusCheckCategory(e.Statuscheck) === "noReference") &&
           !e.OnHold &&
           !e.TemporaryLeavingWithoutPGI &&
+          !e.InvalidStock &&
           !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock")
       );
 
@@ -333,9 +353,12 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     return arr;
   }, [baseMerged, searchTerm, activeFilter, sortConfig, reallocationData, grRangeFilter]);
 
-  const activeRows = filtered.filter(e => !e.OnHold && !e.TemporaryLeavingWithoutPGI);
+  const activeRows = filtered.filter(
+    (e) => !e.OnHold && !e.TemporaryLeavingWithoutPGI && !e.InvalidStock
+  );
   const onHoldRows = filtered.filter(e =>  e.OnHold);
   const temporaryLeavingRows = filtered.filter(e => e.TemporaryLeavingWithoutPGI);
+  const invalidStockRows = filtered.filter(e => e.InvalidStock);
 
   const maxGRDays = Math.max(...baseMerged.map(e => e["GR to GI Days"] || 0), 1);
 
@@ -368,6 +391,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             TemporaryLeavingWithoutPGI: false,
             TemporaryLeavingWithoutPGIAt: null,
             TemporaryLeavingWithoutPGIBy: null,
+            InvalidStock: false,
+            InvalidStockAt: null,
+            InvalidStockBy: null,
           }
         : {}),
     };
@@ -385,6 +411,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         delete prev.TemporaryLeavingWithoutPGI;
         delete prev.TemporaryLeavingWithoutPGIAt;
         delete prev.TemporaryLeavingWithoutPGIBy;
+        delete prev.InvalidStock;
+        delete prev.InvalidStockAt;
+        delete prev.InvalidStockBy;
         return { ...m, [id]: prev };
       });
       setError(e => ({ ...e, [id]: err?.message || "Update failed" }));
@@ -418,6 +447,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             OnHold: false,
             OnHoldAt: null,
             OnHoldBy: null,
+            InvalidStock: false,
+            InvalidStockAt: null,
+            InvalidStockBy: null,
           }
         : {}),
     };
@@ -433,6 +465,58 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         delete prev.TemporaryLeavingWithoutPGIAt;
         delete prev.TemporaryLeavingWithoutPGIBy;
         if (next) delete prev.Comment;
+        if (next) {
+          delete prev.InvalidStock;
+          delete prev.InvalidStockAt;
+          delete prev.InvalidStockBy;
+          delete prev.OnHold;
+          delete prev.OnHoldAt;
+          delete prev.OnHoldBy;
+        }
+        return { ...m, [id]: prev };
+      });
+      setError((e) => ({ ...e, [id]: err?.message || "Update failed" }));
+    } finally {
+      setSaving((s) => ({ ...s, [id]: false }));
+    }
+  };
+
+  const handleToggleInvalidStock = async (row: ProcessedDispatchEntry, next: boolean) => {
+    const id = getRowKey(row);
+    const patch: Partial<ProcessedDispatchEntry> = {
+      InvalidStock: next,
+      InvalidStockAt: next ? new Date().toISOString() : null,
+      InvalidStockBy: next ? ("webapp" as const) : null,
+      ...(next
+        ? {
+            OnHold: false,
+            OnHoldAt: null,
+            OnHoldBy: null,
+            TemporaryLeavingWithoutPGI: false,
+            TemporaryLeavingWithoutPGIAt: null,
+            TemporaryLeavingWithoutPGIBy: null,
+          }
+        : {}),
+    };
+    applyOptimistic(id, patch);
+    setSaving((s) => ({ ...s, [id]: true }));
+    setError((e) => ({ ...e, [id]: undefined }));
+    try {
+      await patchDispatch(id, patch);
+    } catch (err: any) {
+      setOptimistic((m) => {
+        const prev = { ...(m[id] || {}) };
+        delete prev.InvalidStock;
+        delete prev.InvalidStockAt;
+        delete prev.InvalidStockBy;
+        if (next) {
+          delete prev.OnHold;
+          delete prev.OnHoldAt;
+          delete prev.OnHoldBy;
+          delete prev.TemporaryLeavingWithoutPGI;
+          delete prev.TemporaryLeavingWithoutPGIAt;
+          delete prev.TemporaryLeavingWithoutPGIBy;
+        }
         return { ...m, [id]: prev };
       });
       setError((e) => ({ ...e, [id]: err?.message || "Update failed" }));
@@ -575,6 +659,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     "Transport Dealer": e.TransportDealer ?? "",
     "On Hold": e.OnHold ? "Yes" : "No",
     "Temporary Leaving without PGI": e.TemporaryLeavingWithoutPGI ? "Yes" : "No",
+    "Invalid stock (to be confirmed)": e.InvalidStock ? "Yes" : "No",
     Status: getStatusCheckLabel(e.Statuscheck),
     Dealer: e.DealerCheck ?? "",
     Reallocation: e.reallocatedTo ?? "",
@@ -796,10 +881,10 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         </TableCell>
 
                         <TableCell className={`${CELL_VDIV} text-center`}>
-                          <div className="flex flex-col items-center gap-2">
+                          <div className="flex flex-col items-center gap-3">
                             <Button
                               size="sm"
-                              className="bg-red-600 text-white"
+                              className="bg-red-600 text-sm text-white"
                               disabled={saving[rowKey]}
                               onClick={() => handleToggleOnHold(entry, true)}
                             >
@@ -808,10 +893,20 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             <Button
                               size="sm"
                               variant="outline"
+                              className="border-slate-300 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
                               disabled={saving[rowKey]}
                               onClick={() => handleToggleTemporaryLeaving(entry, true)}
                             >
                               Temporary Leaving without PGI
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-amber-300 text-sm text-amber-700 shadow-sm hover:bg-amber-50"
+                              disabled={saving[rowKey]}
+                              onClick={() => handleToggleInvalidStock(entry, true)}
+                            >
+                              Invalid Stock
                             </Button>
                           </div>
                         </TableCell>
@@ -945,6 +1040,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         commentDraft={commentDraft}
         setCommentDraft={setCommentDraft}
         handlers={{ handleToggleTemporaryLeaving, handleSaveComment }}
+      />
+
+      <InvalidStockBoard
+        rows={invalidStockRows}
+        saving={saving}
+        error={error}
+        commentDraft={commentDraft}
+        setCommentDraft={setCommentDraft}
+        handlers={{ handleToggleInvalidStock, handleSaveComment }}
       />
     </div>
   );
@@ -1097,6 +1201,90 @@ const TemporaryLeavingBoard: React.FC<{
                       className="bg-emerald-600 text-white"
                       disabled={saving[rowKey]}
                       onClick={() => handlers.handleToggleTemporaryLeaving(row, false)}
+                    >
+                      Mark Ready
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-2 text-sm space-y-1.5 flex-1">
+                  <div className={CELL}><span className="text-slate-500">Customer: </span>{row.Customer || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Model: </span>{row.Model || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Transport: </span>{row.TransportCompany || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Dealer: </span>{row.TransportDealer || "-"}</div>
+                  <div className={CELL}><span className="text-slate-500">Matched PO: </span>{row["Matched PO No"] || "-"}</div>
+                </div>
+
+                <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className={`w-full ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                      placeholder="Add a comment"
+                      value={commentValue}
+                      onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
+                    />
+                    <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
+                      Save
+                    </Button>
+                  </div>
+                  {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+/* ====================== Invalid Stock 卡片 ====================== */
+const InvalidStockBoard: React.FC<{
+  rows: ProcessedDispatchEntry[];
+  saving: Record<string, boolean>;
+  error: Record<string, string | undefined>;
+  commentDraft: Record<string, string>;
+  setCommentDraft: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  handlers: {
+    handleToggleInvalidStock: (row: ProcessedDispatchEntry, next: boolean) => Promise<void>;
+    handleSaveComment: (row: ProcessedDispatchEntry) => Promise<void>;
+  };
+}> = ({ rows, saving, error, commentDraft, setCommentDraft, handlers }) => {
+  if (!rows.length) return null;
+  return (
+    <Card className="w-full max-w-full">
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-5 bg-amber-500 rounded" />
+          <CardTitle className="text-base font-semibold text-slate-900">
+            Invalid stock (to be confirmed)
+          </CardTitle>
+          <div className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+            {rows.length} Items
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 items-stretch w-full max-w-full">
+          {rows.map((row, idx) => {
+            const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
+            const chassisNo = row["Chassis No"] || rowKey;
+            const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
+            const hasComment = commentValue.trim().length > 0;
+            return (
+              <div key={rowKey} className={`h-full min-h-[220px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
+                <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
+                  <div className="font-medium text-sm text-slate-900 break-all">{chassisNo}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                      Invalid stock
+                    </span>
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 text-white"
+                      disabled={saving[rowKey]}
+                      onClick={() => handlers.handleToggleInvalidStock(row, false)}
                     >
                       Mark Ready
                     </Button>

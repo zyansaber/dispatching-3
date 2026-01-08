@@ -12,14 +12,12 @@ const DispatchPage: React.FC = () => {
     reallocProcessed,
     stats,
     transportCompanies,
-    handleRefreshData,
-    refreshing,
     sidebarFilter,
     setSidebarFilter,
   } = useDashboardContext();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<
-    "all" | "wrongStatus" | "noReference" | "snowy" | "canBeDispatched" | "onHold" | "booked" | "temporaryLeaving"
+    "all" | "wrongStatus" | "noReference" | "snowy" | "canBeDispatched" | "onHold" | "booked" | "temporaryLeaving" | "invalidStock"
   >(
     "all"
   );
@@ -50,10 +48,9 @@ const DispatchPage: React.FC = () => {
         onHold={stats.onHold}
         booked={stats.booked}
         temporaryLeavingWithoutPGI={stats.temporaryLeavingWithoutPGI}
+        invalidStock={stats.invalidStock}
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
-        onRefresh={handleRefreshData}
-        refreshing={refreshing}
       />
 
       <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
