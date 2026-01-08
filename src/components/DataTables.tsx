@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowUpDown, AlertTriangle, Mail, Download, RotateCw } from "lucide-react";
 import { ProcessedDispatchEntry, ProcessedReallocationEntry, TransportConfig } from "@/types";
-import { getGRDaysColor, getGRDaysWidth, reportError, patchDispatch } from "@/lib/firebase";
+import {
+  getGRDaysColor,
+  getGRDaysWidth,
+  getStatusCheckCategory,
+  getStatusCheckLabel,
+  reportError,
+  patchDispatch,
+} from "@/lib/firebase";
 import { toast } from "sonner";
 import type { SidebarFilter } from "@/pages/Index";
 
@@ -44,24 +51,26 @@ const loadEmailModule = () => {
 /* ====================== 顶部统计卡片 ====================== */
 interface DispatchStatsProps {
   total: number;
-  invalidStock: number;
+  wrongStatus: number;
+  noReference: number;
   snowyStock: number;
   canBeDispatched: number;
   booked?: number;
   onHold?: number;
-  onFilterChange: (filter: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked') => void;
-  activeFilter?: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked';
+  onFilterChange: (filter: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked') => void;
+  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked';
   onRefresh: () => void;
   refreshing?: boolean;
 }
 
 export const DispatchStats: React.FC<DispatchStatsProps> = ({
-  total, invalidStock, snowyStock, canBeDispatched, onHold, booked,
+  total, wrongStatus, noReference, snowyStock, canBeDispatched, onHold, booked,
   onFilterChange, activeFilter = "all", onRefresh, refreshing = false,
 }) => {
   const cards = [
     { label: "Total", value: total, filter: "all" },
-    { label: "Invalid", value: invalidStock, filter: "invalid" },
+    { label: "Wrong status in CMS", value: wrongStatus, filter: "wrongStatus" },
+    { label: "Not found in the planning schedule", value: noReference, filter: "noReference" },
     { label: "Snowy Stock", value: snowyStock, filter: "snowy" },
     { label: "Can Dispatch", value: canBeDispatched, filter: "canBeDispatched" },
     ...(booked !== undefined ? [{ label: "Booked", value: booked, filter: "booked" } as const] : []),
@@ -100,7 +109,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 /* ====================== 主表 ====================== */
 interface DispatchTableProps {
   allData: ProcessedDispatchEntry[];
-  activeFilter?: 'all' | 'invalid' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked';
+  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked';
   searchTerm: string;
   onSearchChange: (term: string) => void;
   reallocationData: ProcessedReallocationEntry[];
@@ -165,7 +174,14 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   const filtered = useMemo(() => {
     const s = (searchTerm || "").toLowerCase();
     let arr = baseMerged;
-    if (activeFilter === "invalid")   arr = arr.filter(e => e.Statuscheck !== "OK");
+    if (activeFilter === "wrongStatus")
+      arr = arr.filter(
+        (e) => getStatusCheckCategory(e.Statuscheck) === "wrongStatus"
+      );
+    if (activeFilter === "noReference")
+      arr = arr.filter(
+        (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
+      );
     if (activeFilter === "onHold")    arr = arr.filter(e => e.OnHold === true);
     if (activeFilter === "booked")    arr = arr.filter(e => {
       const poNo = e["Matched PO No"];
@@ -206,6 +222,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           safeIncludes(d.TransportCompany, s) ||
           safeIncludes(d.TransportDealer, s) ||
           safeIncludes(d.Statuscheck, s) ||
+          safeIncludes(getStatusCheckLabel(d.Statuscheck), s) ||
           safeIncludes(d.DealerCheck, s) ||
           safeIncludes(d.reallocatedTo, s) ||
           safeIncludes(d.Comment, s) ||
@@ -402,7 +419,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     "Transport Company": e.TransportCompany ?? "",
     "Transport Dealer": e.TransportDealer ?? "",
     "On Hold": e.OnHold ? "Yes" : "No",
-    Status: e.Statuscheck ?? "",
+    Status: getStatusCheckLabel(e.Statuscheck),
     Dealer: e.DealerCheck ?? "",
     Reallocation: e.reallocatedTo ?? "",
     Comment: e.Comment ?? "",
@@ -553,6 +570,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   const pickupLocal  = pickupDraft[id]  ?? (entry.EstimatedPickupAt ? isoToLocal(entry.EstimatedPickupAt) : "");
                   const hasComment = commentValue.trim().length > 0;
                   const hasPickup = pickupLocal.length > 0;
+                  const statusLabel = getStatusCheckLabel(entry.Statuscheck);
+                  const statusCategory = getStatusCheckCategory(entry.Statuscheck);
 
                   return (
                     <React.Fragment key={id}>
@@ -671,11 +690,11 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                               <span className="text-[13px] text-slate-600 w-24 shrink-0">Checks</span>
                               <span
                                 className={`px-2 py-1 rounded-full text-xs ${
-                                  entry.Statuscheck === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                  statusCategory === "ok" ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                 }`}
-                                title={`Status: ${entry.Statuscheck || "-"}`}
+                                title={`Status: ${statusLabel}`}
                               >
-                                Status: {entry.Statuscheck || "-"}
+                                Status: {statusLabel}
                               </span>
                               <span
                                 className={`px-2 py-1 rounded-full text-xs ${

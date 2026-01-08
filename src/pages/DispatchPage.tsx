@@ -18,7 +18,9 @@ const DispatchPage: React.FC = () => {
     setSidebarFilter,
   } = useDashboardContext();
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "invalid" | "snowy" | "canBeDispatched" | "onHold" | "booked">(
+  const [activeFilter, setActiveFilter] = useState<
+    "all" | "wrongStatus" | "noReference" | "snowy" | "canBeDispatched" | "onHold" | "booked"
+  >(
     "all"
   );
 
@@ -41,7 +43,8 @@ const DispatchPage: React.FC = () => {
 
       <DispatchStats
         total={stats.total}
-        invalidStock={stats.invalidStock}
+        wrongStatus={stats.wrongStatus}
+        noReference={stats.noReference}
         snowyStock={stats.snowyStock}
         canBeDispatched={stats.canBeDispatched}
         onHold={stats.onHold}
