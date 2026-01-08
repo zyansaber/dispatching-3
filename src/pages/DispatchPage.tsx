@@ -40,7 +40,6 @@ const DispatchPage: React.FC = () => {
       </div>
 
       <DispatchStats
-        total={stats.total}
         wrongStatus={stats.wrongStatus}
         noReference={stats.noReference}
         snowyStock={stats.snowyStock}
