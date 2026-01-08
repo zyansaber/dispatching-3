@@ -24,6 +24,8 @@ declare global { interface Window { XLSX?: any } }
 const CELL = "text-sm leading-5 whitespace-nowrap overflow-hidden text-ellipsis";
 const CELL_VDIV = "border-r border-slate-200 last:border-r-0"; // 竖向浅分隔
 const STATS_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4";
+const BOARD_HEAD = "px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500";
+const BOARD_CELL = "px-3 py-2 text-sm text-slate-700 align-top";
 
 // 列宽（避免左右滚动）
 const COLS = [
@@ -64,14 +66,12 @@ interface DispatchStatsProps {
 }
 
 export const DispatchStats: React.FC<DispatchStatsProps> = ({
-  wrongStatus, noReference, snowyStock, canBeDispatched, onHold, booked,
+  wrongStatus, noReference, canBeDispatched, onHold,
   temporaryLeavingWithoutPGI, invalidStock, onFilterChange, activeFilter = "all",
 }) => {
   const waitingForBooking = canBeDispatched + wrongStatus + noReference;
   const topCards = [
     { label: "Waiting for booking", value: waitingForBooking, filter: "canBeDispatched" },
-    { label: "Snowy Stock", value: snowyStock, filter: "snowy" },
-    ...(booked !== undefined ? [{ label: "Booked", value: booked, filter: "booked" } as const] : []),
   ] as const;
   const otherCards = [
     ...(onHold !== undefined ? [{ label: "On Hold", value: onHold, filter: "onHold" } as const] : []),
@@ -1064,74 +1064,89 @@ const OnHoldBoard: React.FC<{
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 items-stretch w-full max-w-full">
-          {rows.map((row, idx) => {
-            const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
-            const chassisNo = row["Chassis No"] || rowKey;
-            const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
-            const pickupLocal  = pickupDraft[rowKey]  ?? (row.EstimatedPickupAt ? new Date(row.EstimatedPickupAt).toISOString().slice(0,16) : "");
-            const hasComment = commentValue.trim().length > 0;
-            const hasPickup = pickupLocal.length > 0;
-            return (
-              <div key={rowKey} className={`h-full min-h-[260px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
-                <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
-                  <div className="font-medium text-sm text-slate-900 break-all">{chassisNo}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                      On Hold
-                    </span>
-                    <Button
-                      size="sm"
-                      className="bg-emerald-600 text-white"
-                      disabled={saving[rowKey]}
-                      onClick={() => handlers.handleToggleOnHold(row, false)}
-                    >
-                      Mark Ready
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-2 text-sm space-y-1.5 flex-1">
-                  <div className={CELL}><span className="text-slate-500">Customer: </span>{row.Customer || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Model: </span>{row.Model || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Transport: </span>{row.TransportCompany || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Dealer: </span>{row.TransportDealer || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Matched PO: </span>{row["Matched PO No"] || "-"}</div>
-                </div>
-
-                <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      className={`w-full ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
-                      placeholder="Add a comment"
-                      value={commentValue}
-                      onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
-                    />
-                    <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
-                      Save
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="datetime-local"
-                      className={`px-2 py-1 border rounded w-full ${hasPickup ? "border-emerald-300 bg-emerald-50/70" : ""}`}
-                      min={new Date().toISOString().slice(0,16)}
-                      value={pickupLocal}
-                      onChange={(e) => setPickupDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
-                    />
-                    <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSavePickup(row)}>
-                      Save
-                    </Button>
-                  </div>
-
-                  {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
-                </div>
-              </div>
-            );
-          })}
+      <CardContent className="p-0">
+        <div className="w-full max-w-full overflow-x-auto">
+          <Table className="w-full table-fixed">
+            <TableHeader className="bg-slate-50 border-y border-slate-200">
+              <TableRow>
+                <TableHead className={`${BOARD_HEAD} w-[140px]`}>Chassis</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[160px]`}>Customer</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[120px]`}>Model</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Transport</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Dealer</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Matched PO</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[260px]`}>Comment</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[220px]`}>Pickup</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[160px]`}>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row, idx) => {
+                const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
+                const chassisNo = row["Chassis No"] || rowKey;
+                const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
+                const pickupLocal = pickupDraft[rowKey] ?? (row.EstimatedPickupAt ? new Date(row.EstimatedPickupAt).toISOString().slice(0, 16) : "");
+                const hasComment = commentValue.trim().length > 0;
+                const hasPickup = pickupLocal.length > 0;
+                return (
+                  <TableRow key={rowKey} className={idx % 2 ? "bg-white" : "bg-slate-50/60"}>
+                    <TableCell className={`${BOARD_CELL} font-medium text-slate-900`} title={chassisNo}>{chassisNo}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.Customer || ""}>{row.Customer || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.Model || ""}>{row.Model || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.TransportCompany || ""}>{row.TransportCompany || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.TransportDealer || ""}>{row.TransportDealer || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row["Matched PO No"] || ""}>{row["Matched PO No"] || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL}>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className={`h-8 ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                            placeholder="Add a comment"
+                            value={commentValue}
+                            onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
+                          />
+                          <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
+                            Save
+                          </Button>
+                        </div>
+                        {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell className={BOARD_CELL}>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="datetime-local"
+                          className={`h-8 px-2 py-1 border rounded w-full ${hasPickup ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                          min={new Date().toISOString().slice(0, 16)}
+                          value={pickupLocal}
+                          onChange={(e) => setPickupDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
+                        />
+                        <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSavePickup(row)}>
+                          Save
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell className={BOARD_CELL}>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                          On Hold
+                        </span>
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 text-white"
+                          disabled={saving[rowKey]}
+                          onClick={() => handlers.handleToggleOnHold(row, false)}
+                        >
+                          Mark Ready
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
@@ -1162,58 +1177,72 @@ const TemporaryLeavingBoard: React.FC<{
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 items-stretch w-full max-w-full">
-          {rows.map((row, idx) => {
-            const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
-            const chassisNo = row["Chassis No"] || rowKey;
-            const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
-            const hasComment = commentValue.trim().length > 0;
-            return (
-              <div key={rowKey} className={`h-full min-h-[240px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
-                <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
-                  <div className="font-medium text-sm text-slate-900 break-all">{chassisNo}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                      Temporary Leaving
-                    </span>
-                    <Button
-                      size="sm"
-                      className="bg-emerald-600 text-white"
-                      disabled={saving[rowKey]}
-                      onClick={() => handlers.handleToggleTemporaryLeaving(row, false)}
-                    >
-                      Mark Ready
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-2 text-sm space-y-1.5 flex-1">
-                  <div className={CELL}><span className="text-slate-500">Customer: </span>{row.Customer || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Model: </span>{row.Model || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Transport: </span>{row.TransportCompany || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Dealer: </span>{row.TransportDealer || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Matched PO: </span>{row["Matched PO No"] || "-"}</div>
-                </div>
-
-                <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      className={`w-full ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
-                      placeholder="Add a comment"
-                      value={commentValue}
-                      onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
-                    />
-                    <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
-                      Save
-                    </Button>
-                  </div>
-                  {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
-                </div>
-              </div>
-            );
-          })}
+      <CardContent className="p-0">
+        <div className="w-full max-w-full overflow-x-auto">
+          <Table className="w-full table-fixed">
+            <TableHeader className="bg-slate-50 border-y border-slate-200">
+              <TableRow>
+                <TableHead className={`${BOARD_HEAD} w-[140px]`}>Chassis</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[160px]`}>Customer</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[120px]`}>Model</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Transport</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Dealer</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Matched PO</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[320px]`}>Comment</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[160px]`}>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row, idx) => {
+                const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
+                const chassisNo = row["Chassis No"] || rowKey;
+                const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
+                const hasComment = commentValue.trim().length > 0;
+                return (
+                  <TableRow key={rowKey} className={idx % 2 ? "bg-white" : "bg-slate-50/60"}>
+                    <TableCell className={`${BOARD_CELL} font-medium text-slate-900`} title={chassisNo}>{chassisNo}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.Customer || ""}>{row.Customer || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.Model || ""}>{row.Model || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.TransportCompany || ""}>{row.TransportCompany || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.TransportDealer || ""}>{row.TransportDealer || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row["Matched PO No"] || ""}>{row["Matched PO No"] || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL}>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className={`h-8 ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                            placeholder="Add a comment"
+                            value={commentValue}
+                            onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
+                          />
+                          <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
+                            Save
+                          </Button>
+                        </div>
+                        {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell className={BOARD_CELL}>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                          Temporary Leaving
+                        </span>
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 text-white"
+                          disabled={saving[rowKey]}
+                          onClick={() => handlers.handleToggleTemporaryLeaving(row, false)}
+                        >
+                          Mark Ready
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
@@ -1246,58 +1275,72 @@ const InvalidStockBoard: React.FC<{
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 items-stretch w-full max-w-full">
-          {rows.map((row, idx) => {
-            const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
-            const chassisNo = row["Chassis No"] || rowKey;
-            const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
-            const hasComment = commentValue.trim().length > 0;
-            return (
-              <div key={rowKey} className={`h-full min-h-[220px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
-                <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
-                  <div className="font-medium text-sm text-slate-900 break-all">{chassisNo}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                      Invalid stock
-                    </span>
-                    <Button
-                      size="sm"
-                      className="bg-emerald-600 text-white"
-                      disabled={saving[rowKey]}
-                      onClick={() => handlers.handleToggleInvalidStock(row, false)}
-                    >
-                      Mark Ready
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-2 text-sm space-y-1.5 flex-1">
-                  <div className={CELL}><span className="text-slate-500">Customer: </span>{row.Customer || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Model: </span>{row.Model || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Transport: </span>{row.TransportCompany || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Dealer: </span>{row.TransportDealer || "-"}</div>
-                  <div className={CELL}><span className="text-slate-500">Matched PO: </span>{row["Matched PO No"] || "-"}</div>
-                </div>
-
-                <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      className={`w-full ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
-                      placeholder="Add a comment"
-                      value={commentValue}
-                      onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
-                    />
-                    <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
-                      Save
-                    </Button>
-                  </div>
-                  {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
-                </div>
-              </div>
-            );
-          })}
+      <CardContent className="p-0">
+        <div className="w-full max-w-full overflow-x-auto">
+          <Table className="w-full table-fixed">
+            <TableHeader className="bg-slate-50 border-y border-slate-200">
+              <TableRow>
+                <TableHead className={`${BOARD_HEAD} w-[140px]`}>Chassis</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[160px]`}>Customer</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[120px]`}>Model</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Transport</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Dealer</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[150px]`}>Matched PO</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[320px]`}>Comment</TableHead>
+                <TableHead className={`${BOARD_HEAD} w-[160px]`}>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row, idx) => {
+                const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
+                const chassisNo = row["Chassis No"] || rowKey;
+                const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
+                const hasComment = commentValue.trim().length > 0;
+                return (
+                  <TableRow key={rowKey} className={idx % 2 ? "bg-white" : "bg-slate-50/60"}>
+                    <TableCell className={`${BOARD_CELL} font-medium text-slate-900`} title={chassisNo}>{chassisNo}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.Customer || ""}>{row.Customer || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.Model || ""}>{row.Model || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.TransportCompany || ""}>{row.TransportCompany || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row.TransportDealer || ""}>{row.TransportDealer || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL} title={row["Matched PO No"] || ""}>{row["Matched PO No"] || "-"}</TableCell>
+                    <TableCell className={BOARD_CELL}>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className={`h-8 ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                            placeholder="Add a comment"
+                            value={commentValue}
+                            onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
+                          />
+                          <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
+                            Save
+                          </Button>
+                        </div>
+                        {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell className={BOARD_CELL}>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                          Invalid stock
+                        </span>
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 text-white"
+                          disabled={saving[rowKey]}
+                          onClick={() => handlers.handleToggleInvalidStock(row, false)}
+                        >
+                          Mark Ready
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
