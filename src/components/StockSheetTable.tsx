@@ -288,6 +288,55 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
 
+  const toCsvCell = (value?: string | number | boolean | null) => {
+    if (value == null) return "";
+    const stringValue = String(value);
+    if (/[",\n]/.test(stringValue)) {
+      return `"${stringValue.replace(/"/g, "\"\"")}"`;
+    }
+    return stringValue;
+  };
+
+  const handleDownloadList = () => {
+    const headers = [
+      "Chassis No",
+      "Model",
+      "Scheduled Dealer",
+      "Latest Reallocation Dealer",
+      "Customer Name",
+      "Transport Company",
+      "Ready for Transport",
+      "Update",
+      "Year / Notes",
+      "Dispatched",
+    ];
+
+    const rows = processedRows.map((row) => [
+      row.chassisNo,
+      row.scheduleModel,
+      row.scheduledDealer,
+      row.reallocatedDealer,
+      row.customer,
+      row.transportCompany,
+      formatPickupTime(row.pickupAt),
+      row.update,
+      row.yearNotes,
+      row.dispatched ? "Yes" : "No",
+    ]);
+
+    const content = [headers, ...rows]
+      .map((row) => row.map((cell) => toCsvCell(cell)).join(","))
+      .join("\n");
+
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "stock_sheet_list.csv";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  };
+
   const handleUploadTemplate = async (file: File) => {
     setImporting(true);
     try {
@@ -488,6 +537,9 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
           </Button>
           <Button variant="outline" onClick={handleDownloadTemplate}>
             Download Template
+          </Button>
+          <Button variant="outline" onClick={handleDownloadList}>
+            Download List
           </Button>
           <Button
             variant="outline"

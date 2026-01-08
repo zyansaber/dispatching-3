@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,17 @@ const StockPage: React.FC = () => {
   const { dispatchProcessed } = useDashboardContext();
   const [activeFilter, setActiveFilter] = useState<"all" | "booked" | "transportNoPO">("all");
 
+  const hasMatchedPO = useCallback((entry: ProcessedDispatchEntry) => {
+    const poNo = entry["Matched PO No"];
+    return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
+  }, []);
+
+  const hasTransportInfo = useCallback((entry: ProcessedDispatchEntry) => {
+    const company = entry.TransportCompany;
+    const hasCompany = typeof company === "string" ? company.trim().length > 0 : Boolean(company);
+    return hasCompany || Boolean(entry.EstimatedPickupAt);
+  }, []);
+
   const allEntries = useMemo(() => {
     const entries = [...dispatchProcessed];
     const getStatusRank = (entry: ProcessedDispatchEntry) => {
@@ -19,13 +30,13 @@ const StockPage: React.FC = () => {
         entry.reallocatedTo === "Snowy Stock" ||
         entry["Scheduled Dealer"] === "Snowy Stock";
 
-      if (entry.EstimatedPickupAt) return 0;
-      if (statusCategory === "ok") return 1;
-      if (isSnowyStock) return 2;
-      if (entry.OnHold) return 3;
-      if (entry.TemporaryLeavingWithoutPGI) return 4;
-      if (statusCategory === "wrongStatus") return 5;
-      if (statusCategory === "noReference") return 6;
+      if (entry.OnHold) return 0;
+      if (entry.TemporaryLeavingWithoutPGI) return 1;
+      if (entry.InvalidStock) return 2;
+      if (statusCategory === "wrongStatus") return 3;
+      if (statusCategory === "noReference") return 4;
+      if (isSnowyStock) return 5;
+      if (hasMatchedPO(entry)) return 6;
       return 7;
     };
 
@@ -34,34 +45,34 @@ const StockPage: React.FC = () => {
       if (statusDiff !== 0) return statusDiff;
       return (a["Chassis No"] || "").localeCompare(b["Chassis No"] || "");
     });
-  }, [dispatchProcessed]);
+  }, [dispatchProcessed, hasMatchedPO]);
 
   const bookedCount = useMemo(
-    () => allEntries.filter((entry) => !!entry.EstimatedPickupAt).length,
-    [allEntries]
+    () => allEntries.filter((entry) => hasMatchedPO(entry)).length,
+    [allEntries, hasMatchedPO]
   );
 
   const transportNoPOCount = useMemo(
     () =>
       allEntries.filter(
-        (entry) => !!entry.EstimatedPickupAt && !entry["Matched PO No"]
+        (entry) => hasTransportInfo(entry) && !hasMatchedPO(entry)
       ).length,
-    [allEntries]
+    [allEntries, hasMatchedPO, hasTransportInfo]
   );
 
   const filteredEntries = useMemo(() => {
     if (activeFilter === "booked") {
-      return allEntries.filter((entry) => !!entry.EstimatedPickupAt);
+      return allEntries.filter((entry) => hasMatchedPO(entry));
     }
 
     if (activeFilter === "transportNoPO") {
       return allEntries.filter(
-        (entry) => !!entry.EstimatedPickupAt && !entry["Matched PO No"]
+        (entry) => hasTransportInfo(entry) && !hasMatchedPO(entry)
       );
     }
 
     return allEntries;
-  }, [activeFilter, allEntries]);
+  }, [activeFilter, allEntries, hasMatchedPO, hasTransportInfo]);
 
   const getStatusMeta = (entry: ProcessedDispatchEntry) => {
     const statusCategory = getStatusCheckCategory(entry.Statuscheck);
@@ -69,16 +80,37 @@ const StockPage: React.FC = () => {
       entry.reallocatedTo === "Snowy Stock" ||
       entry["Scheduled Dealer"] === "Snowy Stock";
 
+    if (entry.OnHold) {
+      return {
+        label: "On Hold",
+        badgeClass: "border-amber-300 bg-amber-50 text-amber-700",
+      };
+    }
+
+    if (entry.TemporaryLeavingWithoutPGI) {
+      return {
+        label: "Temporary leaving",
+        badgeClass: "border-orange-300 bg-orange-50 text-orange-700",
+      };
+    }
+
+    if (entry.InvalidStock) {
+      return {
+        label: "Invalid stock (to be confirmed)",
+        badgeClass: "border-yellow-300 bg-yellow-50 text-yellow-700",
+      };
+    }
+
     if (statusCategory === "wrongStatus") {
       return {
-        label: "Wrong status",
+        label: "Wrong CMS status",
         badgeClass: "border-rose-300 bg-rose-50 text-rose-700",
       };
     }
 
     if (statusCategory === "noReference") {
       return {
-        label: "Old van",
+        label: "Not in planning schedule",
         badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
       };
     }
@@ -90,37 +122,16 @@ const StockPage: React.FC = () => {
       };
     }
 
-    if (entry.OnHold) {
-      return {
-        label: "On hold",
-        badgeClass: "border-amber-300 bg-amber-50 text-amber-700",
-      };
-    }
-
-    if (entry.TemporaryLeavingWithoutPGI) {
-      return {
-        label: "Temporary leaving without PGI",
-        badgeClass: "border-orange-300 bg-orange-50 text-orange-700",
-      };
-    }
-
-    if (entry.EstimatedPickupAt) {
+    if (hasMatchedPO(entry)) {
       return {
         label: "Booked",
         badgeClass: "border-violet-300 bg-violet-50 text-violet-700",
       };
     }
 
-    if (statusCategory === "ok") {
-      return {
-        label: "Can dispatch",
-        badgeClass: "border-emerald-300 bg-emerald-50 text-emerald-700",
-      };
-    }
-
     return {
-      label: "Unknown",
-      badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
+      label: "Waiting for booking",
+      badgeClass: "border-emerald-300 bg-emerald-50 text-emerald-700",
     };
   };
 
@@ -129,6 +140,56 @@ const StockPage: React.FC = () => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "-";
     return date.toLocaleString();
+  };
+
+  const toCsvCell = (value?: string | number | boolean | null) => {
+    if (value == null) return "";
+    const stringValue = String(value);
+    if (/[",\n]/.test(stringValue)) {
+      return `"${stringValue.replace(/"/g, "\"\"")}"`;
+    }
+    return stringValue;
+  };
+
+  const handleDownloadList = () => {
+    const headers = [
+      "Chassis No",
+      "Model",
+      "Scheduled Dealer",
+      "Reallocation",
+      "Transport Company",
+      "Transport Time",
+      "PO No",
+      "Customer",
+      "Status",
+    ];
+
+    const rows = allEntries.map((entry) => {
+      const statusMeta = getStatusMeta(entry);
+      return [
+        entry["Chassis No"] || "",
+        entry.Model || "",
+        entry["Scheduled Dealer"] || "",
+        entry.reallocatedTo || "",
+        entry.TransportCompany || "",
+        formatPickup(entry.EstimatedPickupAt),
+        entry["Matched PO No"] || "",
+        entry.Customer || "",
+        statusMeta.label,
+      ];
+    });
+
+    const content = [headers, ...rows]
+      .map((row) => row.map((cell) => toCsvCell(cell)).join(","))
+      .join("\n");
+
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "stock_sheet_list.csv";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
 
   return (
@@ -140,9 +201,14 @@ const StockPage: React.FC = () => {
               <CardTitle className="text-lg">Stock Sheet</CardTitle>
               <CardDescription>All chassis with live dispatch status highlights.</CardDescription>
             </div>
-            <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold">
-              {allEntries.length} listed
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold">
+                {allEntries.length} listed
+              </Badge>
+              <Button size="sm" variant="outline" onClick={handleDownloadList}>
+                Download List
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -164,7 +230,7 @@ const StockPage: React.FC = () => {
               className="flex items-center gap-2"
               onClick={() => setActiveFilter("booked")}
             >
-              <span>Booked (Transport time)</span>
+              <span>Booked (PO No)</span>
               <Badge variant={activeFilter === "booked" ? "secondary" : "outline"} className="px-2">
                 {bookedCount}
               </Badge>

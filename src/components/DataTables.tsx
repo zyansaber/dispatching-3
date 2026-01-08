@@ -1070,7 +1070,6 @@ const OnHoldBoard: React.FC<{
               <TableHead className="min-w-[160px]">Customer</TableHead>
               <TableHead className="min-w-[120px]">Model</TableHead>
               <TableHead className="min-w-[160px]">Transport</TableHead>
-              <TableHead className="min-w-[160px]">Dealer</TableHead>
               <TableHead className="min-w-[160px]">Matched PO</TableHead>
               <TableHead className="min-w-[260px]">Comment</TableHead>
               <TableHead className="min-w-[260px]">Pickup</TableHead>
@@ -1091,7 +1090,6 @@ const OnHoldBoard: React.FC<{
                   <TableCell className={CELL}>{row.Customer || "-"}</TableCell>
                   <TableCell className={CELL}>{row.Model || "-"}</TableCell>
                   <TableCell className={CELL}>{row.TransportCompany || "-"}</TableCell>
-                  <TableCell className={CELL}>{row.TransportDealer || "-"}</TableCell>
                   <TableCell className={CELL}>{row["Matched PO No"] || "-"}</TableCell>
                   <TableCell className="min-w-[260px]">
                     <div className="flex items-center gap-2">
@@ -1177,7 +1175,6 @@ const TemporaryLeavingBoard: React.FC<{
               <TableHead className="min-w-[160px]">Customer</TableHead>
               <TableHead className="min-w-[120px]">Model</TableHead>
               <TableHead className="min-w-[160px]">Transport</TableHead>
-              <TableHead className="min-w-[160px]">Dealer</TableHead>
               <TableHead className="min-w-[160px]">Matched PO</TableHead>
               <TableHead className="min-w-[260px]">Comment</TableHead>
               <TableHead className="min-w-[180px]">Actions</TableHead>
@@ -1195,7 +1192,6 @@ const TemporaryLeavingBoard: React.FC<{
                   <TableCell className={CELL}>{row.Customer || "-"}</TableCell>
                   <TableCell className={CELL}>{row.Model || "-"}</TableCell>
                   <TableCell className={CELL}>{row.TransportCompany || "-"}</TableCell>
-                  <TableCell className={CELL}>{row.TransportDealer || "-"}</TableCell>
                   <TableCell className={CELL}>{row["Matched PO No"] || "-"}</TableCell>
                   <TableCell className="min-w-[260px]">
                     <div className="flex items-center gap-2">

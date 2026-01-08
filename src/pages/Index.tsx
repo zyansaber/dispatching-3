@@ -120,9 +120,15 @@ const IndexPage: React.FC = () => {
 
   const transportNoPOCount = useMemo(
     () =>
-      stockEntries.filter(
-        (entry) => !!entry.EstimatedPickupAt && !entry["Matched PO No"]
-      ).length,
+      stockEntries.filter((entry) => {
+        const poNo = entry["Matched PO No"];
+        const hasPO = typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
+        if (hasPO) return false;
+        const company = entry.TransportCompany;
+        const hasCompany =
+          typeof company === "string" ? company.trim().length > 0 : Boolean(company);
+        return Boolean(entry.EstimatedPickupAt) || hasCompany;
+      }).length,
     [stockEntries]
   );
 
