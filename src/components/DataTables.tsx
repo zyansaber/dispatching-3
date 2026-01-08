@@ -23,6 +23,7 @@ declare global { interface Window { XLSX?: any } }
 // 统一样式
 const CELL = "text-sm leading-5 whitespace-nowrap overflow-hidden text-ellipsis";
 const CELL_VDIV = "border-r border-slate-200 last:border-r-0"; // 竖向浅分隔
+const STATS_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
 // 列宽（避免左右滚动）
 const COLS = [
@@ -35,7 +36,7 @@ const COLS = [
   { key: "Scheduled Dealer", w: 150 },
   { key: "Matched PO No",    w: 150 },
   { key: "Transport",        w: 180 },
-  { key: "Status",           w: 110 },
+  { key: "Action",           w: 160 },
 ];
 
 // 邮件（可选）
@@ -112,7 +113,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
     <div className="space-y-4 w-full max-w-full overflow-x-hidden">
       {topCards.length > 0 && (
         <div className="flex flex-col gap-3">
-          <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className={`${STATS_GRID} flex-1`}>
             {topCards.map((card) => (
               <Card
                 key={card.filter}
@@ -134,7 +135,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
         <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
           Other
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className={STATS_GRID}>
           {otherCards.map((card) => (
             <Card
               key={card.label}
@@ -157,7 +158,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
         <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
           Data issue
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
+        <div className={STATS_GRID}>
           {dataIssueCards.map((card) => (
             <Card
               key={card.filter}
@@ -196,6 +197,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc'; } | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // 行内编辑
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
@@ -303,6 +305,19 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       });
     }
 
+    if (searchTerm.trim()) {
+      const s = searchTerm.toLowerCase();
+      const matches = (value?: string | number | null) =>
+        value != null && String(value).toLowerCase().includes(s);
+      arr = arr.filter((e) =>
+        matches(e["Chassis No"]) ||
+        matches(e.Customer) ||
+        matches(e.Model) ||
+        matches(e["Scheduled Dealer"]) ||
+        matches(e.TransportDealer)
+      );
+    }
+
     if (sortConfig) {
       const { key, direction } = sortConfig;
       arr = [...arr].sort((a: any, b: any) => {
@@ -316,7 +331,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       });
     }
     return arr;
-  }, [baseMerged, activeFilter, sortConfig, grRangeFilter]);
+  }, [baseMerged, activeFilter, sortConfig, grRangeFilter, searchTerm]);
 
   const activeRows = filtered.filter(
     (e) => !e.OnHold && !e.TemporaryLeavingWithoutPGI && !e.InvalidStock
@@ -716,19 +731,26 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* 自然标题行（不吸附） */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900">Dispatch Data</h2>
-        <Button variant="outline" className="shrink-0" onClick={exportExcel}>
-          <Download className="h-4 w-4 mr-2" />
-          Export
-        </Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">Dispatch Data</h2>
+          <p className="text-sm text-slate-500">Search by chassis, customer, model, or dealer.</p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Input
+            placeholder="Search chassis, customer, model, dealer..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full sm:w-72"
+          />
+          <Button variant="outline" className="shrink-0" onClick={exportExcel}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+        </div>
       </div>
 
       <Card className="w-full max-w-full">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-600">Summary</CardTitle>
-        </CardHeader>
-
         <CardContent className="p-0">
           <div className="w-full max-w-full overflow-x-hidden">
             <Table className="w-full table-fixed">
@@ -841,7 +863,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                           <div className="flex flex-col items-center gap-3">
                             <Button
                               size="sm"
-                              className="bg-red-600 text-sm text-white"
+                              className="w-full min-w-[140px] bg-red-600 text-sm text-white"
                               disabled={saving[rowKey]}
                               onClick={() => handleToggleOnHold(entry, true)}
                             >
@@ -850,7 +872,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-slate-300 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
+                              className="w-full min-w-[140px] border-slate-300 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
                               disabled={saving[rowKey]}
                               onClick={() => handleToggleTemporaryLeaving(entry, true)}
                             >
@@ -859,7 +881,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-amber-300 text-sm text-amber-700 shadow-sm hover:bg-amber-50"
+                              className="w-full min-w-[140px] border-amber-300 text-sm text-amber-700 shadow-sm hover:bg-amber-50"
                               disabled={saving[rowKey]}
                               onClick={() => handleToggleInvalidStock(entry, true)}
                             >
@@ -978,7 +1000,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 2xl:grid-cols-3">
         {/* On Hold 卡片 */}
         <OnHoldBoard
           rows={onHoldRows}
