@@ -27,6 +27,7 @@ const DispatchPage: React.FC = () => {
         wrongStatus={stats.wrongStatus}
         noReference={stats.noReference}
         snowyStock={stats.snowyStock}
+        waitingForBooking={stats.waitingForBooking}
         canBeDispatched={stats.canBeDispatched}
         onHold={stats.onHold}
         booked={stats.booked}

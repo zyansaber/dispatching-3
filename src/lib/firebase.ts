@@ -381,10 +381,11 @@ export const getDispatchStats = (
   const noReference = activeEntries.filter(
     (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
   ).length;
-  const booked = activeEntries.filter((e) => {
-    const poNo = e["Matched PO No"];
+  const isBookedEntry = (entry: DispatchData[string]) => {
+    const poNo = entry["Matched PO No"];
     return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
-  }).length;
+  };
+  const booked = activeEntries.filter(isBookedEntry).length;
 
   const chassisToReallocatedTo = new Map<string, string>();
   Object.entries(reallocationData).forEach(([chassisNumber, entryObj]) => {
@@ -414,6 +415,9 @@ export const getDispatchStats = (
   const snowyStock = processedEntries.filter((e) =>
     isSnowyStock(e, chassisToReallocatedTo)
   ).length;
+  const waitingForBooking = processedEntries.filter(
+    (e) => !isSnowyStock(e, chassisToReallocatedTo) && !isBookedEntry(e)
+  ).length;
   const canBeDispatched = processedEntries.filter(
     (e) =>
       e.Statuscheck === "OK" &&
@@ -429,6 +433,7 @@ export const getDispatchStats = (
     wrongStatus,
     noReference,
     snowyStock,
+    waitingForBooking,
     canBeDispatched,
     onHold,
     temporaryLeavingWithoutPGI,
