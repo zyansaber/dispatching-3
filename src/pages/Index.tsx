@@ -101,13 +101,13 @@ const IndexPage: React.FC = () => {
 
   const stockEntries = useMemo(() => {
     const merged = new Map<string, ProcessedDispatchEntry>();
-    [...readyToDispatch, ...onHoldStock].forEach((entry) => {
+    dispatchProcessed.forEach((entry) => {
       if (!entry["Chassis No"]) return;
       merged.set(entry["Chassis No"], entry);
     });
 
     return Array.from(merged.values());
-  }, [onHoldStock, readyToDispatch]);
+  }, [dispatchProcessed]);
 
   const bookedCount = useMemo(
     () =>
