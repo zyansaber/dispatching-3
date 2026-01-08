@@ -184,9 +184,6 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 interface DispatchTableProps {
   allData: ProcessedDispatchEntry[];
   activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock';
-  searchTerm: string;
-  onSearchChange: (term: string) => void;
-  reallocationData: ProcessedReallocationEntry[];
   transportCompanies?: TransportConfig;
   grRangeFilter?: SidebarFilter | null;
 }
@@ -194,9 +191,6 @@ interface DispatchTableProps {
 export const DispatchTable: React.FC<DispatchTableProps> = ({
   allData,
   activeFilter = "all",
-  searchTerm,
-  onSearchChange,
-  reallocationData,
   transportCompanies = {},
   grRangeFilter = null,
 }) => {
@@ -245,7 +239,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     setSortConfig({ key, direction });
   };
 
-  const safeIncludes = (v: any, s: string) => v != null && String(v).toLowerCase().includes(s);
   const getRowKey = (row: ProcessedDispatchEntry) => row.dispatchKey ?? row["Chassis No"] ?? "";
 
   // 合并乐观层
@@ -259,7 +252,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   }, [allData, optimistic]);
 
   const filtered = useMemo(() => {
-    const s = (searchTerm || "").toLowerCase();
     let arr = baseMerged;
     if (activeFilter === "wrongStatus")
       arr = arr.filter(
@@ -311,33 +303,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       });
     }
 
-    if (s) {
-      arr = arr.filter(entry => {
-        const d = entry;
-        const reMatch = reallocationData.some(re =>
-          re.chassisNumber === d["Chassis No"] &&
-          (safeIncludes(re.customer, s) || safeIncludes(re.model, s) || safeIncludes(re.reallocatedTo, s) || safeIncludes(re.issue?.type, s))
-        );
-        return (
-          safeIncludes(d["Chassis No"], s) ||
-          safeIncludes(d.Customer, s) ||
-          safeIncludes(d.Model, s) ||
-          safeIncludes(d["Matched PO No"], s) ||
-          safeIncludes(d["SAP Data"], s) ||
-          safeIncludes(d["Scheduled Dealer"], s) ||
-          safeIncludes(d.TransportCompany, s) ||
-          safeIncludes(d.TransportDealer, s) ||
-          safeIncludes(d.Statuscheck, s) ||
-          safeIncludes(getStatusCheckLabel(d.Statuscheck), s) ||
-          safeIncludes(d.DealerCheck, s) ||
-          safeIncludes(d.reallocatedTo, s) ||
-          safeIncludes(d.Comment, s) ||
-          safeIncludes(d.EstimatedPickupAt, s) ||
-          reMatch
-        );
-      });
-    }
-
     if (sortConfig) {
       const { key, direction } = sortConfig;
       arr = [...arr].sort((a: any, b: any) => {
@@ -351,7 +316,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       });
     }
     return arr;
-  }, [baseMerged, searchTerm, activeFilter, sortConfig, reallocationData, grRangeFilter]);
+  }, [baseMerged, activeFilter, sortConfig, grRangeFilter]);
 
   const activeRows = filtered.filter(
     (e) => !e.OnHold && !e.TemporaryLeavingWithoutPGI && !e.InvalidStock
@@ -753,18 +718,10 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       {/* 自然标题行（不吸附） */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-slate-900">Dispatch Data</h2>
-        <div className="flex items-center gap-3">
-          <Input
-            placeholder="Search chassis / dealer / PO / comment ..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-[280px]"
-          />
-          <Button variant="outline" className="shrink-0" onClick={exportExcel}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
+        <Button variant="outline" className="shrink-0" onClick={exportExcel}>
+          <Download className="h-4 w-4 mr-2" />
+          Export
+        </Button>
       </div>
 
       <Card className="w-full max-w-full">
@@ -1021,35 +978,37 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         </CardContent>
       </Card>
 
-      {/* On Hold 卡片 */}
-      <OnHoldBoard
-        rows={onHoldRows}
-        saving={saving}
-        error={error}
-        commentDraft={commentDraft}
-        pickupDraft={pickupDraft}
-        setCommentDraft={setCommentDraft}
-        setPickupDraft={setPickupDraft}
-        handlers={{ handleToggleOnHold, handleSaveComment, handleSavePickup }}
-      />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* On Hold 卡片 */}
+        <OnHoldBoard
+          rows={onHoldRows}
+          saving={saving}
+          error={error}
+          commentDraft={commentDraft}
+          pickupDraft={pickupDraft}
+          setCommentDraft={setCommentDraft}
+          setPickupDraft={setPickupDraft}
+          handlers={{ handleToggleOnHold, handleSaveComment, handleSavePickup }}
+        />
 
-      <TemporaryLeavingBoard
-        rows={temporaryLeavingRows}
-        saving={saving}
-        error={error}
-        commentDraft={commentDraft}
-        setCommentDraft={setCommentDraft}
-        handlers={{ handleToggleTemporaryLeaving, handleSaveComment }}
-      />
+        <TemporaryLeavingBoard
+          rows={temporaryLeavingRows}
+          saving={saving}
+          error={error}
+          commentDraft={commentDraft}
+          setCommentDraft={setCommentDraft}
+          handlers={{ handleToggleTemporaryLeaving, handleSaveComment }}
+        />
 
-      <InvalidStockBoard
-        rows={invalidStockRows}
-        saving={saving}
-        error={error}
-        commentDraft={commentDraft}
-        setCommentDraft={setCommentDraft}
-        handlers={{ handleToggleInvalidStock, handleSaveComment }}
-      />
+        <InvalidStockBoard
+          rows={invalidStockRows}
+          saving={saving}
+          error={error}
+          commentDraft={commentDraft}
+          setCommentDraft={setCommentDraft}
+          handlers={{ handleToggleInvalidStock, handleSaveComment }}
+        />
+      </div>
     </div>
   );
 };
