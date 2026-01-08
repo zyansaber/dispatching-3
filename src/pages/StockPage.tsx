@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getStatusCheckCategory } from "@/lib/firebase";
 import { ProcessedDispatchEntry } from "@/types";
 import { useDashboardContext } from "./Index";
 
@@ -24,21 +23,30 @@ const StockPage: React.FC = () => {
 
   const allEntries = useMemo(() => {
     const entries = [...dispatchProcessed];
-    const getStatusRank = (entry: ProcessedDispatchEntry) => {
-      const statusCategory = getStatusCheckCategory(entry.Statuscheck);
+    const statusOrder = new Map<string, number>([
+      ["Booked", 0],
+      ["Waiting for booking", 1],
+      ["Snowy stock", 2],
+      ["On Hold", 3],
+      ["Temporary leaving", 4],
+      ["Invalid stock (to be confirmed)", 5],
+    ]);
+
+    const getStatusLabel = (entry: ProcessedDispatchEntry) => {
       const isSnowyStock =
         entry.reallocatedTo === "Snowy Stock" ||
         entry["Scheduled Dealer"] === "Snowy Stock";
 
-      if (entry.OnHold) return 0;
-      if (entry.TemporaryLeavingWithoutPGI) return 1;
-      if (entry.InvalidStock) return 2;
-      if (statusCategory === "wrongStatus") return 3;
-      if (statusCategory === "noReference") return 4;
-      if (isSnowyStock) return 5;
-      if (hasMatchedPO(entry)) return 6;
-      return 7;
+      if (entry.OnHold) return "On Hold";
+      if (entry.TemporaryLeavingWithoutPGI) return "Temporary leaving";
+      if (entry.InvalidStock) return "Invalid stock (to be confirmed)";
+      if (isSnowyStock) return "Snowy stock";
+      if (hasMatchedPO(entry)) return "Booked";
+      return "Waiting for booking";
     };
+
+    const getStatusRank = (entry: ProcessedDispatchEntry) =>
+      statusOrder.get(getStatusLabel(entry)) ?? 99;
 
     return entries.sort((a, b) => {
       const statusDiff = getStatusRank(a) - getStatusRank(b);
@@ -75,7 +83,6 @@ const StockPage: React.FC = () => {
   }, [activeFilter, allEntries, hasMatchedPO, hasTransportInfo]);
 
   const getStatusMeta = (entry: ProcessedDispatchEntry) => {
-    const statusCategory = getStatusCheckCategory(entry.Statuscheck);
     const isSnowyStock =
       entry.reallocatedTo === "Snowy Stock" ||
       entry["Scheduled Dealer"] === "Snowy Stock";
@@ -98,20 +105,6 @@ const StockPage: React.FC = () => {
       return {
         label: "Invalid stock (to be confirmed)",
         badgeClass: "border-yellow-300 bg-yellow-50 text-yellow-700",
-      };
-    }
-
-    if (statusCategory === "wrongStatus") {
-      return {
-        label: "Wrong CMS status",
-        badgeClass: "border-rose-300 bg-rose-50 text-rose-700",
-      };
-    }
-
-    if (statusCategory === "noReference") {
-      return {
-        label: "Not in planning schedule",
-        badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
       };
     }
 
