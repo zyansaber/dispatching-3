@@ -19,7 +19,7 @@ const DispatchPage: React.FC = () => {
   } = useDashboardContext();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<
-    "all" | "wrongStatus" | "noReference" | "snowy" | "canBeDispatched" | "onHold" | "booked"
+    "all" | "wrongStatus" | "noReference" | "snowy" | "canBeDispatched" | "onHold" | "booked" | "temporaryLeaving"
   >(
     "all"
   );
@@ -49,6 +49,7 @@ const DispatchPage: React.FC = () => {
         canBeDispatched={stats.canBeDispatched}
         onHold={stats.onHold}
         booked={stats.booked}
+        temporaryLeavingWithoutPGI={stats.temporaryLeavingWithoutPGI}
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
         onRefresh={handleRefreshData}

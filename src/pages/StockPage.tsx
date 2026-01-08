@@ -23,9 +23,10 @@ const StockPage: React.FC = () => {
       if (statusCategory === "ok") return 1;
       if (isSnowyStock) return 2;
       if (entry.OnHold) return 3;
-      if (statusCategory === "wrongStatus") return 4;
-      if (statusCategory === "noReference") return 5;
-      return 6;
+      if (entry.TemporaryLeavingWithoutPGI) return 4;
+      if (statusCategory === "wrongStatus") return 5;
+      if (statusCategory === "noReference") return 6;
+      return 7;
     };
 
     return entries.sort((a, b) => {
@@ -93,6 +94,13 @@ const StockPage: React.FC = () => {
       return {
         label: "On hold",
         badgeClass: "border-amber-300 bg-amber-50 text-amber-700",
+      };
+    }
+
+    if (entry.TemporaryLeavingWithoutPGI) {
+      return {
+        label: "Temporary leaving without PGI",
+        badgeClass: "border-orange-300 bg-orange-50 text-orange-700",
       };
     }
 

@@ -377,6 +377,7 @@ export const getDispatchStats = (
     (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
   ).length;
   const onHold = entries.filter((e) => e.OnHold === true).length;
+  const temporaryLeavingWithoutPGI = entries.filter((e) => e.TemporaryLeavingWithoutPGI === true).length;
   const booked = entries.filter((e) => {
     const poNo = e["Matched PO No"];
     return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
@@ -411,7 +412,11 @@ export const getDispatchStats = (
     isSnowyStock(e, chassisToReallocatedTo)
   ).length;
   const canBeDispatched = processedEntries.filter(
-    (e) => e.Statuscheck === "OK" && !e.OnHold && !isSnowyStock(e, chassisToReallocatedTo)
+    (e) =>
+      e.Statuscheck === "OK" &&
+      !e.OnHold &&
+      !e.TemporaryLeavingWithoutPGI &&
+      !isSnowyStock(e, chassisToReallocatedTo)
   ).length;
 
   return {
@@ -422,6 +427,7 @@ export const getDispatchStats = (
     snowyStock,
     canBeDispatched,
     onHold,
+    temporaryLeavingWithoutPGI,
     booked,
   };
 };
@@ -468,6 +474,7 @@ export const filterDispatchData = (
     return data.filter(
       (e) =>
         e.Statuscheck === "OK" &&
+        !e.TemporaryLeavingWithoutPGI &&
         !(e.reallocatedTo === "Snowy Stock" ||
           e["Scheduled Dealer"] === "Snowy Stock")
     );
