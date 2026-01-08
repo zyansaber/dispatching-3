@@ -11,13 +11,29 @@ const StockPage: React.FC = () => {
   const { dispatchProcessed } = useDashboardContext();
   const [activeFilter, setActiveFilter] = useState<"all" | "booked" | "transportNoPO">("all");
 
-  const allEntries = useMemo(
-    () =>
-      [...dispatchProcessed].sort((a, b) =>
-        (a["Chassis No"] || "").localeCompare(b["Chassis No"] || "")
-      ),
-    [dispatchProcessed]
-  );
+  const allEntries = useMemo(() => {
+    const entries = [...dispatchProcessed];
+    const getStatusRank = (entry: ProcessedDispatchEntry) => {
+      const statusCategory = getStatusCheckCategory(entry.Statuscheck);
+      const isSnowyStock =
+        entry.reallocatedTo === "Snowy Stock" ||
+        entry["Scheduled Dealer"] === "Snowy Stock";
+
+      if (entry.EstimatedPickupAt) return 0;
+      if (statusCategory === "ok") return 1;
+      if (isSnowyStock) return 2;
+      if (entry.OnHold) return 3;
+      if (statusCategory === "wrongStatus") return 4;
+      if (statusCategory === "noReference") return 5;
+      return 6;
+    };
+
+    return entries.sort((a, b) => {
+      const statusDiff = getStatusRank(a) - getStatusRank(b);
+      if (statusDiff !== 0) return statusDiff;
+      return (a["Chassis No"] || "").localeCompare(b["Chassis No"] || "");
+    });
+  }, [dispatchProcessed]);
 
   const bookedCount = useMemo(
     () => allEntries.filter((entry) => !!entry.EstimatedPickupAt).length,
@@ -56,7 +72,6 @@ const StockPage: React.FC = () => {
       return {
         label: "Wrong status",
         badgeClass: "border-rose-300 bg-rose-50 text-rose-700",
-        rowClass: "border-l-4 border-rose-300 bg-rose-50/20",
       };
     }
 
@@ -64,7 +79,6 @@ const StockPage: React.FC = () => {
       return {
         label: "Old van",
         badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
-        rowClass: "bg-slate-50",
       };
     }
 
@@ -72,7 +86,6 @@ const StockPage: React.FC = () => {
       return {
         label: "Snowy stock",
         badgeClass: "border-sky-300 bg-sky-50 text-sky-700",
-        rowClass: "bg-sky-50/70",
       };
     }
 
@@ -80,7 +93,6 @@ const StockPage: React.FC = () => {
       return {
         label: "On hold",
         badgeClass: "border-amber-300 bg-amber-50 text-amber-700",
-        rowClass: "bg-amber-50/70",
       };
     }
 
@@ -88,7 +100,6 @@ const StockPage: React.FC = () => {
       return {
         label: "Booked",
         badgeClass: "border-violet-300 bg-violet-50 text-violet-700",
-        rowClass: "bg-violet-50/70",
       };
     }
 
@@ -96,14 +107,12 @@ const StockPage: React.FC = () => {
       return {
         label: "Can dispatch",
         badgeClass: "border-emerald-300 bg-emerald-50 text-emerald-700",
-        rowClass: "bg-emerald-50/70",
       };
     }
 
     return {
       label: "Unknown",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
-      rowClass: "",
     };
   };
 
@@ -184,7 +193,7 @@ const StockPage: React.FC = () => {
                 {filteredEntries.map((entry) => {
                   const statusMeta = getStatusMeta(entry);
                   return (
-                    <TableRow key={entry["Chassis No"]} className={statusMeta.rowClass}>
+                    <TableRow key={entry["Chassis No"]}>
                       <TableCell className="font-medium">{entry["Chassis No"] || "-"}</TableCell>
                       <TableCell>{entry.Model || "-"}</TableCell>
                       <TableCell>{entry["Scheduled Dealer"] || "-"}</TableCell>

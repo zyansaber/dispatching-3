@@ -67,14 +67,31 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
   total, wrongStatus, noReference, snowyStock, canBeDispatched, onHold, booked,
   onFilterChange, activeFilter = "all", onRefresh, refreshing = false,
 }) => {
+  const waitingForBooking = canBeDispatched + wrongStatus + noReference;
   const cards = [
     { label: "Total", value: total, filter: "all" },
-    { label: "Wrong status in CMS", value: wrongStatus, filter: "wrongStatus" },
-    { label: "Not found in the planning schedule", value: noReference, filter: "noReference" },
     { label: "Snowy Stock", value: snowyStock, filter: "snowy" },
-    { label: "Can Dispatch", value: canBeDispatched, filter: "canBeDispatched" },
+    {
+      label: "Waiting for booking transport",
+      value: waitingForBooking,
+      filter: "canBeDispatched",
+    },
     ...(booked !== undefined ? [{ label: "Booked", value: booked, filter: "booked" } as const] : []),
     ...(onHold !== undefined ? [{ label: "On Hold", value: onHold, filter: "onHold" } as const] : []),
+  ] as const;
+  const otherCards = [
+    {
+      label: "Wrong status in CMS",
+      value: wrongStatus,
+      filter: "wrongStatus",
+      className: "border-rose-200 bg-rose-50/60",
+    },
+    {
+      label: "Not found in the planning schedule",
+      value: noReference,
+      filter: "noReference",
+      className: "border-amber-200 bg-amber-50/70",
+    },
   ] as const;
 
   return (
@@ -101,6 +118,29 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
           <RotateCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           {refreshing ? "Refreshing..." : "Refresh"}
         </Button>
+      </div>
+      <div className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Other
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
+          {otherCards.map((card) => (
+            <Card
+              key={card.filter}
+              className={`cursor-pointer border transition hover:shadow-sm ${card.className} ${
+                activeFilter === card.filter ? "ring-2 ring-blue-500" : ""
+              }`}
+              onClick={() => onFilterChange(card.filter as any)}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[13px] font-medium text-slate-600 truncate">{card.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -195,7 +235,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     if (activeFilter === "canBeDispatched")
       arr = arr.filter(
         (e) =>
-          e.Statuscheck === "OK" &&
+          (e.Statuscheck === "OK" ||
+            getStatusCheckCategory(e.Statuscheck) === "wrongStatus" ||
+            getStatusCheckCategory(e.Statuscheck) === "noReference") &&
           !e.OnHold &&
           !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock")
       );
