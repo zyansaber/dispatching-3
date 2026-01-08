@@ -424,7 +424,7 @@ export const getDispatchStats = (
   ).length;
 
   return {
-    total: activeEntries.length,
+    total: entries.length,
     okStatus,
     wrongStatus,
     noReference,
