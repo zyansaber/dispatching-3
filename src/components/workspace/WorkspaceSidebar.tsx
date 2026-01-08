@@ -137,7 +137,7 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 pt-1">
-                  <div className="text-2xl font-bold text-white">{totals.total} entries</div>
+                  <div className="text-2xl font-bold text-white">{totals.total}</div>
                   <p className="mt-1 text-xs text-slate-400">Snowy stock: {totals.snowy}</p>
                 </CardContent>
               </Card>
