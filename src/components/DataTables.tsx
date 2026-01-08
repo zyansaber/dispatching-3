@@ -143,7 +143,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     setOptimistic((cur) => {
       const next = { ...cur };
       for (const id of Object.keys(cur)) {
-        const base = allData.find(e => e["Chassis No"] === id);
+        const base = allData.find(e => getRowKey(e) === id);
         if (!base) continue;
         const p = cur[id];
         const inSync =
@@ -163,11 +163,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   };
 
   const safeIncludes = (v: any, s: string) => v != null && String(v).toLowerCase().includes(s);
+  const getRowKey = (row: ProcessedDispatchEntry) => row.dispatchKey ?? row["Chassis No"] ?? "";
 
   // 合并乐观层
   const baseMerged = useMemo(() => {
     const map: Record<string, ProcessedDispatchEntry> = {};
-    for (const e of allData) map[e["Chassis No"]] = { ...e, ...(optimistic[e["Chassis No"]] || {}) };
+    for (const e of allData) {
+      const key = getRowKey(e);
+      map[key] = { ...e, ...(optimistic[key] || {}) };
+    }
     return Object.values(map);
   }, [allData, optimistic]);
 
@@ -271,7 +275,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     setOptimistic((m) => ({ ...m, [id]: { ...(m[id] || {}), ...patch } }));
 
   const handleToggleOnHold = async (row: ProcessedDispatchEntry, next: boolean) => {
-    const id = row["Chassis No"];
+    const id = getRowKey(row);
     const patch = { OnHold: next, OnHoldAt: new Date().toISOString(), OnHoldBy: "webapp" as const };
     applyOptimistic(id, patch);
     setSaving(s => ({ ...s, [id]: true }));
@@ -287,7 +291,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   };
 
   const handleSaveComment = async (row: ProcessedDispatchEntry) => {
-    const id = row["Chassis No"];
+    const id = getRowKey(row);
     const value = commentDraft[id] ?? row.Comment ?? "";
     applyOptimistic(id, { Comment: value });
     setSaving(s => ({ ...s, [id]: true }));
@@ -303,7 +307,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   };
 
   const handleSavePickup = async (row: ProcessedDispatchEntry) => {
-    const id = row["Chassis No"];
+    const id = getRowKey(row);
     const localVal = pickupDraft[id] ?? isoToLocal(row.EstimatedPickupAt);
     if (localVal) {
       const picked = new Date(localVal);
@@ -331,7 +335,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     company: string | null,
     dealer?: string | null
   ) => {
-    const id = row["Chassis No"];
+    const id = getRowKey(row);
     const patch: Partial<ProcessedDispatchEntry> = {
       TransportCompany: company,
       TransportDealer: dealer === undefined ? row.TransportDealer || null : dealer,
@@ -359,15 +363,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     }
   };
 
-  const handleReportError = async (chassisNo: string) => {
-    const entry = baseMerged.find(e => e["Chassis No"] === chassisNo);
-    if (!entry) return;
+  const handleReportError = async (entry: ProcessedDispatchEntry) => {
+    const chassisNo = entry["Chassis No"] || entry.dispatchKey || "";
+    if (!chassisNo) return;
     setSendingEmail(chassisNo);
     try {
            const emailModule = await loadEmailModule();
       try {
         await emailModule.sendReportEmail({
-          chassisNo: entry["Chassis No"],
+          chassisNo,
           sapData: entry["SAP Data"],
           scheduledDealer: entry["Scheduled Dealer"],
           reallocatedTo: entry.reallocatedTo,
@@ -561,20 +565,21 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
               <TableBody>
                 {activeRows.map((entry, idx) => {
-                  const id = entry["Chassis No"];
+                  const rowKey = getRowKey(entry);
+                  const chassisNo = entry["Chassis No"] || rowKey;
                   const barColor = getGRDaysColor(entry["GR to GI Days"] || 0);
                   const barWidth = getGRDaysWidth(entry["GR to GI Days"] || 0, maxGRDays);
                   const rowBg = idx % 2 === 0 ? "bg-white" : "bg-slate-50/60";
 
-                  const commentValue = commentDraft[id] ?? (entry.Comment ?? "");
-                  const pickupLocal  = pickupDraft[id]  ?? (entry.EstimatedPickupAt ? isoToLocal(entry.EstimatedPickupAt) : "");
+                  const commentValue = commentDraft[rowKey] ?? (entry.Comment ?? "");
+                  const pickupLocal  = pickupDraft[rowKey]  ?? (entry.EstimatedPickupAt ? isoToLocal(entry.EstimatedPickupAt) : "");
                   const hasComment = commentValue.trim().length > 0;
                   const hasPickup = pickupLocal.length > 0;
                   const statusLabel = getStatusCheckLabel(entry.Statuscheck);
                   const statusCategory = getStatusCheckCategory(entry.Statuscheck);
 
                   return (
-                    <React.Fragment key={id}>
+                    <React.Fragment key={rowKey}>
                       {/* ✅ 每个车架号块的迷你表头（淡色） */}
                       <MiniHeaderRow />
 
@@ -585,8 +590,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                           <div className="h-full w-1 bg-blue-500 rounded-l" />
                         </TableCell>
 
-                        <TableCell className={`${CELL} ${CELL_VDIV} font-medium text-slate-900`} title={id}>
-                          {id}
+                        <TableCell className={`${CELL} ${CELL_VDIV} font-medium text-slate-900`} title={chassisNo}>
+                          {chassisNo}
                         </TableCell>
 
                         <TableCell className={`${CELL} ${CELL_VDIV} text-center`} title={String(entry["GR to GI Days"] ?? "-")}>
@@ -642,7 +647,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                           <Button
                             size="sm"
                             className={entry.OnHold ? "bg-red-600 text-white" : "bg-emerald-600 text-white"}
-                            disabled={saving[id]}
+                            disabled={saving[rowKey]}
                             onClick={() => handleToggleOnHold(entry, !entry.OnHold)}
                           >
                             {entry.OnHold ? "On Hold" : "Ready"}
@@ -662,10 +667,10 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                 className={`w-full max-w-[320px] ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                                 placeholder="Add a comment"
                                 value={commentValue}
-                                onChange={(e) => setCommentDraft((m) => ({ ...m, [id]: e.target.value }))}
+                                onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                                 onKeyDown={(e) => { if (e.key === "Enter") handleSaveComment(entry); }}
                               />
-                              <Button size="sm" variant="secondary" disabled={saving[id]} onClick={() => handleSaveComment(entry)}>
+                              <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handleSaveComment(entry)}>
                                 Save
                               </Button>
                             </div>
@@ -678,9 +683,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                 className={`px-2 py-1 border rounded w-full max-w-[260px] ${hasPickup ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                                 min={minLocalNow}
                                 value={pickupLocal}
-                                onChange={(e) => setPickupDraft((m) => ({ ...m, [id]: e.target.value }))}
+                                onChange={(e) => setPickupDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                               />
-                              <Button size="sm" variant="secondary" disabled={saving[id]} onClick={() => handleSavePickup(entry)}>
+                              <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handleSavePickup(entry)}>
                                 Save
                               </Button>
                             </div>
@@ -723,11 +728,11 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleReportError(id)}
-                                disabled={sendingEmail === id}
+                                onClick={() => handleReportError(entry)}
+                                disabled={sendingEmail === chassisNo}
                                 className="inline-flex items-center gap-1 text-xs"
                               >
-                                {sendingEmail === id ? (
+                                {sendingEmail === chassisNo ? (
                                   <>
                                     <Mail className="h-3 w-3 animate-pulse" />
                                     <span className="hidden sm:inline">Sending...</span>
@@ -806,15 +811,16 @@ const OnHoldBoard: React.FC<{
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 items-stretch w-full max-w-full">
           {rows.map((row, idx) => {
-            const id = row["Chassis No"];
-            const commentValue = commentDraft[id] ?? (row.Comment ?? "");
-            const pickupLocal  = pickupDraft[id]  ?? (row.EstimatedPickupAt ? new Date(row.EstimatedPickupAt).toISOString().slice(0,16) : "");
+            const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
+            const chassisNo = row["Chassis No"] || rowKey;
+            const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
+            const pickupLocal  = pickupDraft[rowKey]  ?? (row.EstimatedPickupAt ? new Date(row.EstimatedPickupAt).toISOString().slice(0,16) : "");
             const hasComment = commentValue.trim().length > 0;
             const hasPickup = pickupLocal.length > 0;
             return (
-              <div key={id} className={`h-full min-h-[260px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
+              <div key={rowKey} className={`h-full min-h-[260px] flex flex-col rounded-lg border border-slate-200 p-4 ${idx % 2 ? "bg-white" : "bg-slate-50/50"}`}>
                 <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
-                  <div className="font-medium text-sm text-slate-900 break-all">{id}</div>
+                  <div className="font-medium text-sm text-slate-900 break-all">{chassisNo}</div>
                   <div className="flex items-center gap-2">
                     <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
                       On Hold
@@ -822,7 +828,7 @@ const OnHoldBoard: React.FC<{
                     <Button
                       size="sm"
                       className="bg-emerald-600 text-white"
-                      disabled={saving[id]}
+                      disabled={saving[rowKey]}
                       onClick={() => handlers.handleToggleOnHold(row, false)}
                     >
                       Mark Ready
@@ -844,10 +850,10 @@ const OnHoldBoard: React.FC<{
                       className={`w-full ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                       placeholder="Add a comment"
                       value={commentValue}
-                      onChange={(e) => setCommentDraft((m) => ({ ...m, [id]: e.target.value }))}
+                      onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                       onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
                     />
-                    <Button size="sm" variant="secondary" disabled={saving[id]} onClick={() => handlers.handleSaveComment(row)}>
+                    <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
                       Save
                     </Button>
                   </div>
@@ -858,14 +864,14 @@ const OnHoldBoard: React.FC<{
                       className={`px-2 py-1 border rounded w-full ${hasPickup ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                       min={new Date().toISOString().slice(0,16)}
                       value={pickupLocal}
-                      onChange={(e) => setPickupDraft((m) => ({ ...m, [id]: e.target.value }))}
+                      onChange={(e) => setPickupDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                     />
-                    <Button size="sm" variant="secondary" disabled={saving[id]} onClick={() => handlers.handleSavePickup(row)}>
+                    <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSavePickup(row)}>
                       Save
                     </Button>
                   </div>
 
-                  {error[id] && <div className="text-xs text-red-600">{error[id]}</div>}
+                  {error[rowKey] && <div className="text-xs text-red-600">{error[rowKey]}</div>}
                 </div>
               </div>
             );
