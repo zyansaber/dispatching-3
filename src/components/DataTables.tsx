@@ -50,8 +50,12 @@ const loadEmailModule = () => {
 
 /* ====================== 顶部统计卡片 ====================== */
 interface DispatchStatsProps {
+  total: number;
   wrongStatus: number;
   noReference: number;
+  snowyStock: number;
+  canBeDispatched: number;
+  booked?: number;
   onHold?: number;
   temporaryLeavingWithoutPGI?: number;
   invalidStock?: number;
@@ -60,15 +64,22 @@ interface DispatchStatsProps {
 }
 
 export const DispatchStats: React.FC<DispatchStatsProps> = ({
-  wrongStatus, noReference, onHold,
+  total, wrongStatus, noReference, snowyStock, canBeDispatched, onHold, booked,
   temporaryLeavingWithoutPGI, invalidStock, onFilterChange, activeFilter = "all",
 }) => {
-  const topCards = [] as const;
+  const waitingForBooking = canBeDispatched + wrongStatus + noReference;
+  const topCards = [
+    { label: "Total", value: total, filter: "all" },
+    { label: "Waiting for booking transport", value: waitingForBooking, filter: "canBeDispatched" },
+    { label: "Snowy Stock", value: snowyStock, filter: "snowy" },
+    ...(booked !== undefined ? [{ label: "Booked", value: booked, filter: "booked" } as const] : []),
+  ] as const;
   const otherCards = [
+    ...(onHold !== undefined ? [{ label: "On Hold", value: onHold, filter: "onHold" } as const] : []),
     ...(temporaryLeavingWithoutPGI !== undefined
       ? [
           {
-            label: "Temporary leaving",
+            label: "Temporary Leaving without PGI",
             value: temporaryLeavingWithoutPGI,
             filter: "temporaryLeaving",
           } as const,
@@ -83,17 +94,16 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
           } as const,
         ]
       : []),
-    ...(onHold !== undefined ? [{ label: "On Hold", value: onHold, filter: "onHold" } as const] : []),
   ] as const;
   const dataIssueCards = [
     {
-      label: "Not in planning schedule",
+      label: "Not found in the planning schedule",
       value: noReference,
       filter: "noReference",
       className: "border-amber-200 bg-amber-50/70",
     },
     {
-      label: "Wrong CMS status",
+      label: "Wrong status in CMS",
       value: wrongStatus,
       filter: "wrongStatus",
       className: "border-rose-200 bg-rose-50/60",
@@ -102,26 +112,24 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 
   return (
     <div className="space-y-4 w-full max-w-full overflow-x-hidden">
-      {topCards.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-            {topCards.map((card) => (
-              <Card
-                key={card.filter}
-                className={`cursor-pointer transition hover:shadow-sm ${activeFilter === card.filter ? "ring-2 ring-blue-500" : ""}`}
-                onClick={() => onFilterChange(card.filter as any)}
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600 truncate">{card.label}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          {topCards.map((card) => (
+            <Card
+              key={card.filter}
+              className={`cursor-pointer transition hover:shadow-sm ${activeFilter === card.filter ? "ring-2 ring-blue-500" : ""}`}
+              onClick={() => onFilterChange(card.filter as any)}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-slate-600 truncate">{card.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      )}
+      </div>
       <div className="space-y-2">
         <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
           Other
@@ -419,13 +427,13 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     let comment = row.Comment ?? "";
     if (next) {
       const promptValue = window.prompt(
-        "Please enter a comment for temporary leaving.",
+        "Please enter a comment for temporary leaving without PGI.",
         comment
       );
       if (promptValue == null) return;
       comment = promptValue.trim();
       if (!comment) {
-        toast.error("Comment is required for temporary leaving.");
+        toast.error("Comment is required for temporary leaving without PGI.");
         return;
       }
     }
@@ -650,7 +658,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     "Transport Company": e.TransportCompany ?? "",
     "Transport Dealer": e.TransportDealer ?? "",
     "On Hold": e.OnHold ? "Yes" : "No",
-    "Temporary leaving": e.TemporaryLeavingWithoutPGI ? "Yes" : "No",
+    "Temporary Leaving without PGI": e.TemporaryLeavingWithoutPGI ? "Yes" : "No",
     "Invalid stock (to be confirmed)": e.InvalidStock ? "Yes" : "No",
     Status: getStatusCheckLabel(e.Statuscheck),
     Dealer: e.DealerCheck ?? "",
@@ -889,7 +897,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                               disabled={saving[rowKey]}
                               onClick={() => handleToggleTemporaryLeaving(entry, true)}
                             >
-                              Temporary leaving
+                              Temporary Leaving without PGI
                             </Button>
                             <Button
                               size="sm"
@@ -1149,7 +1157,7 @@ const OnHoldBoard: React.FC<{
   );
 };
 
-/* ====================== Temporary leaving 卡片 ====================== */
+/* ====================== Temporary Leaving without PGI 卡片 ====================== */
 const TemporaryLeavingBoard: React.FC<{
   rows: ProcessedDispatchEntry[];
   saving: Record<string, boolean>;
@@ -1167,7 +1175,7 @@ const TemporaryLeavingBoard: React.FC<{
       <CardHeader className="pb-2">
         <div className="flex items-center gap-3">
           <div className="w-1.5 h-5 bg-amber-500 rounded" />
-          <CardTitle className="text-base font-semibold text-slate-900">Temporary leaving</CardTitle>
+          <CardTitle className="text-base font-semibold text-slate-900">Temporary Leaving without PGI</CardTitle>
           <div className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
             {rows.length} Items
           </div>
