@@ -368,17 +368,20 @@ export const getDispatchStats = (
   reallocationData: ReallocationData
 ) => {
   const entries = Object.values(dispatchData);
-  const total = entries.length;
   const okStatus = entries.filter((e) => e.Statuscheck === "OK").length;
-  const wrongStatus = entries.filter(
-    (e) => getStatusCheckCategory(e.Statuscheck) === "wrongStatus"
-  ).length;
-  const noReference = entries.filter(
-    (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
-  ).length;
   const onHold = entries.filter((e) => e.OnHold === true).length;
   const temporaryLeavingWithoutPGI = entries.filter((e) => e.TemporaryLeavingWithoutPGI === true).length;
-  const booked = entries.filter((e) => {
+  const invalidStock = entries.filter((e) => e.InvalidStock === true).length;
+  const activeEntries = entries.filter(
+    (e) => !e.OnHold && !e.TemporaryLeavingWithoutPGI && !e.InvalidStock
+  );
+  const wrongStatus = activeEntries.filter(
+    (e) => getStatusCheckCategory(e.Statuscheck) === "wrongStatus"
+  ).length;
+  const noReference = activeEntries.filter(
+    (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
+  ).length;
+  const booked = activeEntries.filter((e) => {
     const poNo = e["Matched PO No"];
     return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
   }).length;
@@ -398,7 +401,7 @@ export const getDispatchStats = (
     );
   });
 
-  const processedEntries = entries.map((entry) => {
+  const processedEntries = activeEntries.map((entry) => {
     const reallocatedTo = chassisToReallocatedTo.get(entry["Chassis No"]);
     const validatedDealerCheck = validateDealerCheck(
       entry["SAP Data"],
@@ -416,11 +419,12 @@ export const getDispatchStats = (
       e.Statuscheck === "OK" &&
       !e.OnHold &&
       !e.TemporaryLeavingWithoutPGI &&
+      !e.InvalidStock &&
       !isSnowyStock(e, chassisToReallocatedTo)
   ).length;
 
   return {
-    total,
+    total: activeEntries.length,
     okStatus,
     wrongStatus,
     noReference,
@@ -428,6 +432,7 @@ export const getDispatchStats = (
     canBeDispatched,
     onHold,
     temporaryLeavingWithoutPGI,
+    invalidStock,
     booked,
   };
 };
@@ -474,6 +479,7 @@ export const filterDispatchData = (
     return data.filter(
       (e) =>
         e.Statuscheck === "OK" &&
+        !e.InvalidStock &&
         !e.TemporaryLeavingWithoutPGI &&
         !(e.reallocatedTo === "Snowy Stock" ||
           e["Scheduled Dealer"] === "Snowy Stock")

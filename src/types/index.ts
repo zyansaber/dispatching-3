@@ -41,6 +41,11 @@ export interface DispatchEntry {
   TemporaryLeavingWithoutPGIAt?: string | null;
   TemporaryLeavingWithoutPGIBy?: string | null;
 
+  /** ✅ 新增：Invalid stock（待确认）状态 */
+  InvalidStock?: boolean;
+  InvalidStockAt?: string | null;
+  InvalidStockBy?: string | null;
+
   /** ✅ 新增：可编辑备注（后加字段：可缺省） */
   Comment?: string | null;
 
