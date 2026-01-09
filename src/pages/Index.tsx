@@ -281,12 +281,14 @@ const IndexPage: React.FC = () => {
     setSidebarFilter,
   };
 
-  const sidebarColumn = sidebarCollapsed ? "80px" : "304px";
+  const sidebarColumn = sidebarCollapsed
+    ? "var(--workspace-sidebar-collapsed-width)"
+    : "var(--workspace-sidebar-width)";
 
   return (
     <DashboardContext.Provider value={contextValue}>
       <div
-        className="min-h-screen bg-slate-50"
+        className="min-h-screen bg-slate-50 [--workspace-sidebar-collapsed-width:5rem] [--workspace-sidebar-width:18rem] lg:[--workspace-sidebar-width:19rem]"
         style={{ paddingLeft: sidebarColumn, transition: "padding-left 0.3s ease-in-out" }}
       >
         <WorkspaceSidebar

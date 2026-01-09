@@ -75,9 +75,12 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-20 flex h-screen flex-col overflow-hidden border-r border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-50 shadow-xl transition-all duration-300 ease-in-out ${
-        collapsed ? "w-[80px]" : "w-[288px] lg:w-[304px]"
-      }`}
+      className="fixed left-0 top-0 z-20 flex h-screen flex-col overflow-hidden border-r border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 text-slate-50 shadow-xl transition-all duration-300 ease-in-out"
+      style={{
+        width: collapsed
+          ? "var(--workspace-sidebar-collapsed-width)"
+          : "var(--workspace-sidebar-width)",
+      }}
     >
       <div className="flex h-full flex-1 flex-col">
         <div className="relative flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-4">
