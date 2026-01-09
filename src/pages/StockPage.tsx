@@ -246,8 +246,6 @@ const StockPage: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[160px]">Chassis No</TableHead>
-                  <TableHead>SO Number</TableHead>
-                  <TableHead>VIN Number</TableHead>
                   <TableHead>Model</TableHead>
                   <TableHead>Scheduled Dealer</TableHead>
                   <TableHead>Reallocation</TableHead>
@@ -264,8 +262,6 @@ const StockPage: React.FC = () => {
                   return (
                     <TableRow key={entry["Chassis No"]}>
                       <TableCell className="font-medium">{entry["Chassis No"] || "-"}</TableCell>
-                      <TableCell>{entry["SO Number"] || "-"}</TableCell>
-                      <TableCell>{entry["Vin Number"] || (entry as Record<string, any>)["VIN Number"] || "-"}</TableCell>
                       <TableCell>{entry.Model || "-"}</TableCell>
                       <TableCell>{entry["Scheduled Dealer"] || "-"}</TableCell>
                       <TableCell>{entry.reallocatedTo || "-"}</TableCell>
@@ -283,7 +279,7 @@ const StockPage: React.FC = () => {
                 })}
                 {!filteredEntries.length && (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-sm text-muted-foreground">
                       No vehicles match the current filter.
                     </TableCell>
                   </TableRow>
