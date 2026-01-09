@@ -143,7 +143,7 @@ const IndexPage: React.FC = () => {
 
     const counts = buckets.map((bucket) => {
       const count = readyToDispatch.filter((entry) => {
-        const days = Number(entry["Days From GR"] ?? entry["GR to GI Days"] ?? 0) || 0;
+        const days = Number(entry["GR to GI Days"] ?? 0) || 0;
         const withinMin = days >= bucket.min;
         const withinMax = bucket.max == null ? true : days <= bucket.max;
         return withinMin && withinMax;
