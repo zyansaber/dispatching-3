@@ -484,6 +484,7 @@ export const filterDispatchData = (
     return data.filter(
       (e) =>
         e.Statuscheck === "OK" &&
+        !e.OnHold &&
         !e.InvalidStock &&
         !e.TemporaryLeavingWithoutPGI &&
         !(e.reallocatedTo === "Snowy Stock" ||
