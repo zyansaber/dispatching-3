@@ -12,7 +12,6 @@ import {
   PanelRight,
   Package,
   PauseCircle,
-  Printer,
   Repeat,
   ShieldCheck,
   Truck,
@@ -29,7 +28,6 @@ export type WorkspaceNavItem = {
 const navItems: WorkspaceNavItem[] = [
   { to: "/stock", label: "Stock Sheet", icon: ClipboardList, end: true },
   { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/print-doc", label: "Print Doc", icon: Printer, end: true },
   { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
 ];
