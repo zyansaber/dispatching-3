@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDashboardContext } from "@/pages/Index";
-import { filterDispatchData } from "@/lib/firebase";
 
 const formatDate = (value: Date) =>
   value.toLocaleDateString("en-AU", {
@@ -20,31 +19,98 @@ const formatDateTime = (value: Date) =>
     minute: "2-digit",
   });
 
+const toChassisKey = (value?: string | null) => value?.toString().trim() || "";
+
 const PrintDocPage: React.FC = () => {
-  const { dispatchProcessed, reallocRaw, transportCompanies } = useDashboardContext();
+  const { dispatchProcessed, transportCompanies } = useDashboardContext();
   const [transportCompany, setTransportCompany] = useState("");
   const [generatedAt, setGeneratedAt] = useState(() => new Date());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedChassis, setSelectedChassis] = useState<Set<string>>(new Set());
 
-  const readyRows = useMemo(
-    () => filterDispatchData(dispatchProcessed, "canBeDispatched", reallocRaw),
-    [dispatchProcessed, reallocRaw]
-  );
+  const bookedRows = useMemo(() => {
+    return dispatchProcessed.filter((entry) => {
+      const poNo = entry["Matched PO No"];
+      return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
+    });
+  }, [dispatchProcessed]);
+
+  const filteredBookedRows = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase();
+    if (!keyword) return bookedRows;
+    return bookedRows.filter((entry) => {
+      const chassis = toChassisKey(entry["Chassis No"] || entry.dispatchKey);
+      return chassis.toLowerCase().includes(keyword);
+    });
+  }, [bookedRows, searchTerm]);
+
+  const selectedRows = useMemo(() => {
+    return bookedRows.filter((entry) => {
+      const chassis = toChassisKey(entry["Chassis No"] || entry.dispatchKey);
+      return chassis && selectedChassis.has(chassis);
+    });
+  }, [bookedRows, selectedChassis]);
 
   const transportCompanyOptions = useMemo(
     () => Object.values(transportCompanies || {}).map((company) => company.name).filter(Boolean),
     [transportCompanies]
   );
 
+  const selectedCompanyDealers = useMemo(() => {
+    const company = Object.values(transportCompanies || {}).find(
+      (entry) => entry.name === transportCompany
+    );
+    return company?.dealers || [];
+  }, [transportCompanies, transportCompany]);
+
+  const warnings = useMemo(() => {
+    const items: string[] = [];
+    selectedRows.forEach((row) => {
+      const chassis = toChassisKey(row["Chassis No"] || row.dispatchKey) || "Unknown chassis";
+      const poNo = row["Matched PO No"];
+      if (!(typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo))) {
+        items.push(`${chassis}: Missing PO number.`);
+      }
+      const companyValue = row.TransportCompany;
+      if (!(typeof companyValue === "string" ? companyValue.trim().length > 0 : Boolean(companyValue))) {
+        items.push(`${chassis}: Missing Transport Company.`);
+      }
+      const sapDealer = row["SAP Data"];
+      if (!sapDealer || (typeof sapDealer === "string" && sapDealer.trim().length === 0)) {
+        items.push(`${chassis}: Missing SAP Data dealer.`);
+      } else if (transportCompany && selectedCompanyDealers.length > 0) {
+        if (!selectedCompanyDealers.includes(sapDealer)) {
+          items.push(`${chassis}: SAP Data dealer does not match selected transport company.`);
+        }
+      }
+    });
+    return items;
+  }, [selectedCompanyDealers, selectedRows, transportCompany]);
+
   const poNumbers = useMemo(() => {
-    const entries = readyRows
+    const entries = selectedRows
       .map((row) => row["Matched PO No"])
       .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
     return Array.from(new Set(entries)).join(", ");
-  }, [readyRows]);
+  }, [selectedRows]);
 
-  const renderRows = readyRows.length
-    ? readyRows
+  const renderRows = selectedRows.length
+    ? selectedRows
     : [{ "Chassis No": "", "Vin Number": "", "SAP Data": "" }];
+
+  const toggleSelection = (chassis: string) => {
+    setSelectedChassis((prev) => {
+      const next = new Set(prev);
+      if (next.has(chassis)) {
+        next.delete(chassis);
+      } else {
+        next.add(chassis);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedChassis(new Set());
 
   return (
     <div className="print-doc-wrapper">
@@ -52,35 +118,96 @@ const PrintDocPage: React.FC = () => {
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Print Doc</h2>
           <p className="text-sm text-slate-500">
-            Generate a three-page transport document with gate pass, summary, and checklist details.
+            Build a transport gate pass by selecting booked chassis and printing the page below.
           </p>
         </div>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-slate-700">Transport Company</label>
+            <label className="text-sm font-medium text-slate-700">Chassis search</label>
             <Input
-              list="transport-company-options"
-              placeholder="Enter transport company"
-              value={transportCompany}
-              onChange={(event) => setTransportCompany(event.target.value)}
-              className="w-full lg:w-80"
+              placeholder="Search booked chassis..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
             />
-            <datalist id="transport-company-options">
-              {transportCompanyOptions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+            <div className="max-h-56 overflow-y-auto rounded-md border border-slate-200">
+              {filteredBookedRows.length ? (
+                filteredBookedRows.map((row) => {
+                  const chassis = toChassisKey(row["Chassis No"] || row.dispatchKey);
+                  const isChecked = selectedChassis.has(chassis);
+                  return (
+                    <label
+                      key={chassis}
+                      className="flex items-center gap-3 border-b border-slate-100 px-3 py-2 text-sm text-slate-700 last:border-b-0"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSelection(chassis)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      <div className="flex flex-1 flex-col">
+                        <span className="font-medium text-slate-900">{chassis}</span>
+                        <span className="text-xs text-slate-500">
+                          PO: {row["Matched PO No"] || "-"} · SAP: {row["SAP Data"] || "-"}
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })
+              ) : (
+                <div className="px-3 py-4 text-sm text-slate-500">No booked chassis match this search.</div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={clearSelection}>
+                Clear selection
+              </Button>
+              <span className="text-xs text-slate-500">Selected: {selectedRows.length}</span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => setGeneratedAt(new Date())}>
-              Refresh Date &amp; Time
-            </Button>
-            <Button onClick={() => {
-              setGeneratedAt(new Date());
-              window.print();
-            }}>
-              Print Document
-            </Button>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-700">Transport Company</label>
+              <select
+                value={transportCompany}
+                onChange={(event) => setTransportCompany(event.target.value)}
+                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+              >
+                <option value="">Select transport company</option>
+                {transportCompanyOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={() => setGeneratedAt(new Date())}>
+                Refresh Date &amp; Time
+              </Button>
+              <Button
+                onClick={() => {
+                  setGeneratedAt(new Date());
+                  window.print();
+                }}
+              >
+                Print Gate Pass
+              </Button>
+            </div>
+
+            {warnings.length > 0 && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <div className="font-semibold">Selection warnings</div>
+                <ul className="list-disc pl-5">
+                  {warnings.map((warning, index) => (
+                    <li key={`${warning}-${index}`}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -164,121 +291,9 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 text-sm text-slate-700">
             Release Date &amp; Time _____ / _____ / ________ &nbsp;&nbsp;&nbsp; __________ am / pm
           </div>
-        </div>
-      </section>
 
-      <section className="print-page">
-        <div className="print-page__header">
-          <img
-            src="/company-title.svg"
-            alt="Company title"
-            className="print-page__title-image"
-          />
-        </div>
-
-        <div className="print-page__content">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-slate-900">Dispatch Summary</h2>
-            <div className="text-sm text-slate-500">Generated {formatDate(generatedAt)}</div>
-          </div>
-
-          <p className="mt-2 text-sm text-slate-600">
-            Summary of can-dispatch vehicles included in this transport run.
-          </p>
-
-          <div className="mt-5">
-            <table className="print-table">
-              <thead>
-                <tr>
-                  <th>Chassis No</th>
-                  <th>SO Number</th>
-                  <th>VIN Number</th>
-                  <th>Customer</th>
-                  <th>Model</th>
-                  <th>SAP Data</th>
-                  <th>Scheduled Dealer</th>
-                  <th>Matched PO No</th>
-                </tr>
-              </thead>
-              <tbody>
-                {renderRows.map((row, index) => (
-                  <tr key={`${row["Chassis No"] || `placeholder-${index}`}-summary`}>
-                    <td>{row["Chassis No"] || ""}</td>
-                    <td>{row["SO Number"] || ""}</td>
-                    <td>{row["Vin Number"] || (row as Record<string, any>)["VIN Number"] || ""}</td>
-                    <td>{row.Customer || ""}</td>
-                    <td>{row.Model || ""}</td>
-                    <td>{row["SAP Data"] || ""}</td>
-                    <td>{row["Scheduled Dealer"] || ""}</td>
-                    <td>{row["Matched PO No"] || ""}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section className="print-page">
-        <div className="print-page__header">
-          <img
-            src="/company-title.svg"
-            alt="Company title"
-            className="print-page__title-image"
-          />
-        </div>
-
-        <div className="print-page__content">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-slate-900">Release Checklist</h2>
-            <div className="text-sm text-slate-500">Total vehicles: {readyRows.length}</div>
-          </div>
-
-          <p className="mt-2 text-sm text-slate-600">
-            Confirm all documentation and safety checks are completed before release.
-          </p>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
-            <div>Transport Company: {transportCompany || "________________________"}</div>
-            <div>Collection Date: {formatDate(generatedAt)}</div>
-            <div>Supervisor Name: ____________________________</div>
-            <div>Contact Number: ____________________________</div>
-          </div>
-
-          <div className="mt-8">
-            <table className="print-table">
-              <thead>
-                <tr>
-                  <th>Check Item</th>
-                  <th>Status</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  "Vehicle condition verified",
-                  "Keys and documents collected",
-                  "Load securement complete",
-                  "Transport documentation issued",
-                  "Dealer destination confirmed",
-                ].map((item) => (
-                  <tr key={item}>
-                    <td>{item}</td>
-                    <td>☐ OK &nbsp;&nbsp; ☐ Issue</td>
-                    <td>________________________________________</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-10 grid grid-cols-1 gap-6 text-sm text-slate-700 md:grid-cols-2">
-            <div>
-              Dispatch Coordinator Signature: ________________________________
-            </div>
-            <div>
-              Final Release Time: ____________ am / pm
-            </div>
+          <div className="mt-10 text-sm text-slate-500">
+            Generated {formatDate(generatedAt)} · Selected chassis: {selectedRows.length}
           </div>
         </div>
       </section>
