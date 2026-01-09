@@ -570,6 +570,12 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
               <TableHead className="min-w-[140px] h-10 px-3 py-2 border-l border-slate-200/70">
                 Chassis No
               </TableHead>
+              <TableHead className="min-w-[130px] h-10 px-3 py-2 border-l border-slate-200/70">
+                SO Number
+              </TableHead>
+              <TableHead className="min-w-[150px] h-10 px-3 py-2 border-l border-slate-200/70">
+                VIN Number
+              </TableHead>
               <TableHead className="min-w-[110px] h-10 px-3 py-2 border-l border-slate-200/70">
                 Model
               </TableHead>
@@ -602,13 +608,16 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
           <TableBody>
             {visibleRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-sm text-slate-500 py-6">
+                <TableCell colSpan={13} className="text-center text-sm text-slate-500 py-6">
                   {hideDispatched ? "No pending records" : "No stock sheet records yet"}
                 </TableCell>
               </TableRow>
             )}
 
             {visibleRows.map((row) => {
+              const dispatchEntry = dispatchLookup.get(row.chassisNo.toLowerCase().trim());
+              const soNumber = dispatchEntry?.["SO Number"] || "-";
+              const vinNumber = dispatchEntry?.["Vin Number"] || (dispatchEntry as Record<string, any>)?.["VIN Number"] || "-";
               const draft = drafts[row.id] || {};
               const isSaving = savingRow === row.id;
               const isEditing = editingRowId === row.id;
@@ -696,6 +705,12 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
                 </TableCell>
                 <TableCell className="align-top font-semibold text-slate-800 px-3 py-2 border-l border-slate-200/70">
                   {row.chassisNo}
+                </TableCell>
+                <TableCell className="align-top text-slate-700 px-3 py-2 border-l border-slate-200/70">
+                  {soNumber}
+                </TableCell>
+                <TableCell className="align-top text-slate-700 px-3 py-2 border-l border-slate-200/70">
+                  {vinNumber}
                 </TableCell>
                 <TableCell className="align-top text-slate-700 px-3 py-2 border-l border-slate-200/70">
                   {isEditing ? (
