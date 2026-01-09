@@ -25,15 +25,10 @@ const CELL = "text-sm leading-5 whitespace-nowrap overflow-hidden text-ellipsis"
 const CELL_VDIV = "border-r border-slate-200 last:border-r-0"; // 竖向浅分隔
 const STATS_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
-const resolveVinNumber = (entry: ProcessedDispatchEntry) =>
-  entry["Vin Number"] ?? (entry as Record<string, any>)["VIN Number"] ?? "";
-
 // 列宽（避免左右滚动）
 const COLS = [
   { key: "__bar",            w: 8   },
   { key: "Chassis No",       w: 160 },
-  { key: "SO Number",        w: 130 },
-  { key: "Vin Number",       w: 150 },
   { key: "GR to GI Days",    w: 90  },
   { key: "Customer",         w: 160 },
   { key: "Model",            w: 120 },
@@ -320,8 +315,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         value != null && String(value).toLowerCase().includes(s);
       arr = arr.filter((e) =>
         matches(e["Chassis No"]) ||
-        matches(e["SO Number"]) ||
-        matches(resolveVinNumber(e)) ||
         matches(e.Customer) ||
         matches(e.Model) ||
         matches(e["Scheduled Dealer"]) ||
@@ -640,8 +633,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
   const toPlainRow = (e: ProcessedDispatchEntry) => ({
     "Chassis No": e["Chassis No"],
-    "SO Number": e["SO Number"] ?? "",
-    "Vin Number": resolveVinNumber(e),
     "GR to GI Days": e["GR to GI Days"] ?? "",
     Customer: e.Customer ?? "",
     Model: e.Model ?? "",
@@ -730,8 +721,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       {/* 左侧色条占位 */}
       <TableCell className="p-0" />
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Chassis</TableCell>
-      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>SO Number</TableCell>
-      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>VIN Number</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 text-center ${CELL_VDIV}`}>GR Days</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Customer</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Model</TableCell>
@@ -781,8 +770,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="p-0" /> {/* 左色条占位 */}
                   <SortableHeader sortKey="Chassis No">Chassis</SortableHeader>
-                  <SortableHeader sortKey="SO Number">SO Number</SortableHeader>
-                  <SortableHeader sortKey="Vin Number">VIN Number</SortableHeader>
                   <SortableHeader sortKey="GR to GI Days" align="center">GR Days</SortableHeader>
                   <SortableHeader sortKey="Customer">Customer</SortableHeader>
                   <SortableHeader sortKey="Model">Model</SortableHeader>
@@ -823,21 +810,13 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                           <div className="h-full w-1 bg-blue-500 rounded-l" />
                         </TableCell>
 
-                      <TableCell className={`${CELL} ${CELL_VDIV} font-medium text-slate-900`} title={chassisNo}>
-                        {chassisNo}
-                      </TableCell>
+                        <TableCell className={`${CELL} ${CELL_VDIV} font-medium text-slate-900`} title={chassisNo}>
+                          {chassisNo}
+                        </TableCell>
 
-                      <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["SO Number"] || ""}>
-                        {entry["SO Number"] || "-"}
-                      </TableCell>
-
-                      <TableCell className={`${CELL} ${CELL_VDIV}`} title={resolveVinNumber(entry)}>
-                        {resolveVinNumber(entry) || "-"}
-                      </TableCell>
-
-                      <TableCell className={`${CELL} ${CELL_VDIV} text-center`} title={String(entry["GR to GI Days"] ?? "-")}>
-                        <div className="inline-flex flex-col items-stretch w-full">
-                          <div className="flex justify-between text-xs">
+                        <TableCell className={`${CELL} ${CELL_VDIV} text-center`} title={String(entry["GR to GI Days"] ?? "-")}>
+                          <div className="inline-flex flex-col items-stretch w-full">
+                            <div className="flex justify-between text-xs">
                               <span className="text-slate-900">{entry["GR to GI Days"] ?? "-"}</span>
                               <span className="text-slate-500">days</span>
                             </div>
@@ -918,8 +897,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
                       {/* 第二行：编辑 & 扩展 */}
                       <TableRow className={`${rowBg}`}>
-                      {/* 第二行合并 11 列（不含左条） */}
-                      <TableCell colSpan={11} className="border-b border-slate-200">
+                        {/* 第二行合并 9 列（不含左条） */}
+                        <TableCell colSpan={9} className="border-b border-slate-200">
                           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 py-3 px-2">
                             {/* Comment */}
                             <div className="flex items-center gap-2 min-w-0">
@@ -1012,7 +991,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
                       {/* 组间留白（柔和分隔） */}
                       <TableRow>
-                        <TableCell colSpan={12} className="p-0">
+                        <TableCell colSpan={10} className="p-0">
                           <div className="h-3" />
                         </TableCell>
                       </TableRow>
@@ -1092,8 +1071,6 @@ const OnHoldBoard: React.FC<{
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[140px]">Chassis No</TableHead>
-              <TableHead className="min-w-[130px]">SO Number</TableHead>
-              <TableHead className="min-w-[150px]">VIN Number</TableHead>
               <TableHead className="min-w-[160px]">Customer</TableHead>
               <TableHead className="min-w-[120px]">Model</TableHead>
               <TableHead className="min-w-[160px]">Transport</TableHead>
@@ -1114,8 +1091,6 @@ const OnHoldBoard: React.FC<{
               return (
                 <TableRow key={rowKey} className={idx % 2 ? "bg-white" : "bg-slate-50/50"}>
                   <TableCell className={`${CELL} font-medium`}>{chassisNo}</TableCell>
-                  <TableCell className={CELL}>{row["SO Number"] || "-"}</TableCell>
-                  <TableCell className={CELL}>{resolveVinNumber(row) || "-"}</TableCell>
                   <TableCell className={CELL}>{row.Customer || "-"}</TableCell>
                   <TableCell className={CELL}>{row.Model || "-"}</TableCell>
                   <TableCell className={CELL}>{row.TransportCompany || "-"}</TableCell>
@@ -1201,8 +1176,6 @@ const TemporaryLeavingBoard: React.FC<{
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[140px]">Chassis No</TableHead>
-              <TableHead className="min-w-[130px]">SO Number</TableHead>
-              <TableHead className="min-w-[150px]">VIN Number</TableHead>
               <TableHead className="min-w-[160px]">Customer</TableHead>
               <TableHead className="min-w-[120px]">Model</TableHead>
               <TableHead className="min-w-[160px]">Transport</TableHead>
@@ -1220,8 +1193,6 @@ const TemporaryLeavingBoard: React.FC<{
               return (
                 <TableRow key={rowKey} className={idx % 2 ? "bg-white" : "bg-slate-50/50"}>
                   <TableCell className={`${CELL} font-medium`}>{chassisNo}</TableCell>
-                  <TableCell className={CELL}>{row["SO Number"] || "-"}</TableCell>
-                  <TableCell className={CELL}>{resolveVinNumber(row) || "-"}</TableCell>
                   <TableCell className={CELL}>{row.Customer || "-"}</TableCell>
                   <TableCell className={CELL}>{row.Model || "-"}</TableCell>
                   <TableCell className={CELL}>{row.TransportCompany || "-"}</TableCell>
@@ -1293,8 +1264,6 @@ const InvalidStockBoard: React.FC<{
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[140px]">Chassis No</TableHead>
-              <TableHead className="min-w-[130px]">SO Number</TableHead>
-              <TableHead className="min-w-[150px]">VIN Number</TableHead>
               <TableHead className="min-w-[160px]">Customer</TableHead>
               <TableHead className="min-w-[120px]">Model</TableHead>
               <TableHead className="min-w-[160px]">Transport</TableHead>
@@ -1313,8 +1282,6 @@ const InvalidStockBoard: React.FC<{
               return (
                 <TableRow key={rowKey} className={idx % 2 ? "bg-white" : "bg-slate-50/50"}>
                   <TableCell className={`${CELL} font-medium`}>{chassisNo}</TableCell>
-                  <TableCell className={CELL}>{row["SO Number"] || "-"}</TableCell>
-                  <TableCell className={CELL}>{resolveVinNumber(row) || "-"}</TableCell>
                   <TableCell className={CELL}>{row.Customer || "-"}</TableCell>
                   <TableCell className={CELL}>{row.Model || "-"}</TableCell>
                   <TableCell className={CELL}>{row.TransportCompany || "-"}</TableCell>
@@ -1373,15 +1340,6 @@ export const ReallocationTable: React.FC<ReallocationTableProps> = ({
 }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc'; } | null>(null);
 
-  const dispatchLookup = useMemo(() => {
-    const map = new Map<string, ProcessedDispatchEntry>();
-    dispatchData.forEach((entry) => {
-      const chassis = entry["Chassis No"];
-      if (chassis) map.set(chassis, entry);
-    });
-    return map;
-  }, [dispatchData]);
-
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
@@ -1402,35 +1360,22 @@ export const ReallocationTable: React.FC<ReallocationTableProps> = ({
           safeStringIncludes(re.regentProduction, s) ||
           safeStringIncludes(re.issue?.type, s) ||
           dispatchData.some(d => d["Chassis No"] === re.chassisNumber && (
-            safeStringIncludes(d["Scheduled Dealer"], s) ||
-            safeStringIncludes(d["SAP Data"], s) ||
-            safeStringIncludes(d["SO Number"], s) ||
-            safeStringIncludes(resolveVinNumber(d), s)
+            safeStringIncludes(d["Scheduled Dealer"], s) || safeStringIncludes(d["SAP Data"], s)
           ))
         )
       : data;
 
     if (sortConfig) {
       filtered = [...filtered].sort((a: any, b: any) => {
-        const resolveSortValue = (entry: ProcessedReallocationEntry) => {
-          if (sortConfig.key === "soNumber") {
-            return dispatchLookup.get(entry.chassisNumber)?.["SO Number"] ?? "";
-          }
-          if (sortConfig.key === "vinNumber") {
-            const dispatchEntry = dispatchLookup.get(entry.chassisNumber);
-            return dispatchEntry ? resolveVinNumber(dispatchEntry) : "";
-          }
-          return (entry as any)[sortConfig.key];
-        };
-        const aValue = resolveSortValue(a);
-        const bValue = resolveSortValue(b);
+        const aValue = (a as any)[sortConfig.key];
+        const bValue = (b as any)[sortConfig.key];
         const aStr = String(aValue ?? '').toLowerCase();
         const bStr = String(bValue ?? '').toLowerCase();
         return sortConfig.direction === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
       });
     }
     return filtered;
-  }, [data, dispatchData, dispatchLookup, searchTerm, sortConfig]);
+  }, [data, dispatchData, searchTerm, sortConfig]);
 
   const SortableHeader = ({ children, sortKey, className = "" }: { children: React.ReactNode; sortKey: string; className?: string }) => (
     <TableHead className={`cursor-pointer hover:bg-slate-50 transition-colors ${CELL_VDIV} ${className}`} onClick={() => handleSort(sortKey)}>
@@ -1466,8 +1411,6 @@ export const ReallocationTable: React.FC<ReallocationTableProps> = ({
             <TableHeader className="bg-slate-50 border-y border-slate-200">
               <TableRow>
                 <SortableHeader sortKey="chassisNumber">Chassis</SortableHeader>
-                <SortableHeader sortKey="soNumber">SO Number</SortableHeader>
-                <SortableHeader sortKey="vinNumber">VIN Number</SortableHeader>
                 <SortableHeader sortKey="customer">Customer</SortableHeader>
                 <SortableHeader sortKey="model">Model</SortableHeader>
                 <SortableHeader sortKey="originalDealer">Original Dealer</SortableHeader>
@@ -1479,18 +1422,7 @@ export const ReallocationTable: React.FC<ReallocationTableProps> = ({
             <TableBody>
               {filteredAndSortedData.map((re, idx) => (
                 <TableRow key={`${re.chassisNumber}-${(re as any).entryId || re.submitTime || "row"}`} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
-                  {(() => {
-                    const dispatchRow = dispatchLookup.get(re.chassisNumber);
-                    const soNumber = dispatchRow?.["SO Number"] || "-";
-                    const vinNumber = dispatchRow ? resolveVinNumber(dispatchRow) || "-" : "-";
-                    return (
-                      <>
-                        <TableCell className={`${CELL} ${CELL_VDIV} font-medium text-slate-900`} title={re.chassisNumber}>{re.chassisNumber}</TableCell>
-                        <TableCell className={`${CELL} ${CELL_VDIV}`} title={soNumber}>{soNumber}</TableCell>
-                        <TableCell className={`${CELL} ${CELL_VDIV}`} title={vinNumber}>{vinNumber}</TableCell>
-                      </>
-                    );
-                  })()}
+                  <TableCell className={`${CELL} ${CELL_VDIV} font-medium text-slate-900`} title={re.chassisNumber}>{re.chassisNumber}</TableCell>
                   <TableCell className={`${CELL} ${CELL_VDIV}`} title={re.customer || ""}>{re.customer || "-"}</TableCell>
                   <TableCell className={`${CELL} ${CELL_VDIV}`} title={re.model || ""}>{re.model || "-"}</TableCell>
                   <TableCell className={`${CELL} ${CELL_VDIV}`} title={re.originalDealer || ""}>{re.originalDealer || "-"}</TableCell>
