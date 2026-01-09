@@ -16,6 +16,10 @@ export interface DispatchEntry {
   /** ✅ 新增：Code（只读展示，可选） */
   Code?: string | null;
 
+  /** ✅ 新增：销售订单与 VIN 信息 */
+  "SO Number"?: string | null;
+  "Vin Number"?: string | null;
+
   /** 你已有的其它字段（按需保留） */
   "GR to GI Days"?: number | null;
   "Days From GR"?: number | null;
