@@ -255,46 +255,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
   const filtered = useMemo(() => {
     let arr = baseMerged;
-    if (activeFilter === "wrongStatus")
-      arr = arr.filter(
-        (e) => getStatusCheckCategory(e.Statuscheck) === "wrongStatus"
-      );
-    if (activeFilter === "noReference")
-      arr = arr.filter(
-        (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
-      );
-    if (activeFilter === "onHold")    arr = arr.filter(e => e.OnHold === true);
-    if (activeFilter === "temporaryLeaving") arr = arr.filter(e => e.TemporaryLeavingWithoutPGI === true);
-    if (activeFilter === "invalidStock") arr = arr.filter(e => e.InvalidStock === true);
-    if (activeFilter === "booked")    arr = arr.filter(e => {
-      const poNo = e["Matched PO No"];
-      return (
-        !e.OnHold &&
-        !e.TemporaryLeavingWithoutPGI &&
-        !e.InvalidStock &&
-        (typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo))
-      );
-    });
-    if (activeFilter === "snowy")
-      arr = arr.filter(
-        (e) =>
-          !e.OnHold &&
-          !e.TemporaryLeavingWithoutPGI &&
-          !e.InvalidStock &&
-          (e.reallocatedTo === "Snowy Stock" ||
-            e["Scheduled Dealer"] === "Snowy Stock")
-      );
-    if (activeFilter === "canBeDispatched")
-      arr = arr.filter(
-        (e) =>
-          (e.Statuscheck === "OK" ||
-            getStatusCheckCategory(e.Statuscheck) === "wrongStatus" ||
-            getStatusCheckCategory(e.Statuscheck) === "noReference") &&
-          !e.OnHold &&
-          !e.TemporaryLeavingWithoutPGI &&
-          !e.InvalidStock &&
-          !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock")
-      );
+    const hasSearch = searchTerm.trim().length > 0;
 
     if (grRangeFilter?.kind === "grRange") {
       arr = arr.filter((e) => {
@@ -305,7 +266,50 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       });
     }
 
-    if (searchTerm.trim()) {
+    if (!hasSearch) {
+      if (activeFilter === "wrongStatus")
+        arr = arr.filter(
+          (e) => getStatusCheckCategory(e.Statuscheck) === "wrongStatus"
+        );
+      if (activeFilter === "noReference")
+        arr = arr.filter(
+          (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
+        );
+      if (activeFilter === "onHold")    arr = arr.filter(e => e.OnHold === true);
+      if (activeFilter === "temporaryLeaving") arr = arr.filter(e => e.TemporaryLeavingWithoutPGI === true);
+      if (activeFilter === "invalidStock") arr = arr.filter(e => e.InvalidStock === true);
+      if (activeFilter === "booked")    arr = arr.filter(e => {
+        const poNo = e["Matched PO No"];
+        return (
+          !e.OnHold &&
+          !e.TemporaryLeavingWithoutPGI &&
+          !e.InvalidStock &&
+          (typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo))
+        );
+      });
+      if (activeFilter === "snowy")
+        arr = arr.filter(
+          (e) =>
+            !e.OnHold &&
+            !e.TemporaryLeavingWithoutPGI &&
+            !e.InvalidStock &&
+            (e.reallocatedTo === "Snowy Stock" ||
+              e["Scheduled Dealer"] === "Snowy Stock")
+        );
+      if (activeFilter === "canBeDispatched")
+        arr = arr.filter(
+          (e) =>
+            (e.Statuscheck === "OK" ||
+              getStatusCheckCategory(e.Statuscheck) === "wrongStatus" ||
+              getStatusCheckCategory(e.Statuscheck) === "noReference") &&
+            !e.OnHold &&
+            !e.TemporaryLeavingWithoutPGI &&
+            !e.InvalidStock &&
+            !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock")
+        );
+    }
+
+    if (hasSearch) {
       const s = searchTerm.toLowerCase();
       const matches = (value?: string | number | null) =>
         value != null && String(value).toLowerCase().includes(s);
