@@ -29,6 +29,7 @@ export type WorkspaceNavItem = {
 const navItems: WorkspaceNavItem[] = [
   { to: "/stock", label: "Stock Sheet", icon: ClipboardList, end: true },
   { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/print-doc", label: "Print Doc", icon: Printer, end: true },
   { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
 ];
@@ -84,6 +85,10 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
       }}
     >
       <div className="flex h-full flex-1 flex-col">
+        <div className="relative flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-4">
+          {!collapsed && <h1 className="text-base font-semibold leading-tight">Workspace</h1>}
+        </div>
+
         <div className="border-b border-slate-800 px-3 py-3">
           <nav className="space-y-1">
             {navItems.map((item) => (
@@ -122,37 +127,6 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           </nav>
         </div>
 
-        <div className="border-b border-slate-800 px-3 pb-3 pt-2">
-          <Tooltip delayDuration={120} disableHoverableContent={!collapsed}>
-            <TooltipTrigger asChild>
-              <NavLink to="/print-doc" end>
-                {({ isActive }) => (
-                  <div
-                    className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold transition ${
-                      collapsed ? "justify-center" : ""
-                    } ${
-                      isActive
-                        ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-50 shadow-inner"
-                        : "border-emerald-500/40 bg-emerald-500/10 text-emerald-100 hover:border-emerald-400/70 hover:bg-emerald-500/20"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-9 w-9 items-center justify-center rounded-md border border-emerald-400/50 bg-emerald-500/20 shadow-sm ${
-                        collapsed ? "" : ""
-                      }`}
-                    >
-                      <Printer className="h-4 w-4" />
-                    </span>
-                    {!collapsed && <span className="leading-tight">Print Doc</span>}
-                    {collapsed && <span className="sr-only">Print Doc</span>}
-                  </div>
-                )}
-              </NavLink>
-            </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">Print Doc</TooltipContent>}
-          </Tooltip>
-        </div>
-
         {!collapsed && (
           <div className="px-4 py-4">
             <div className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Workspace Overview</div>
@@ -183,6 +157,7 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-1">
                     <div className="text-xl font-semibold text-white">{totals.onHold}</div>
+                    <p className="mt-1 text-[11px] text-slate-400">Waiting for release</p>
                   </CardContent>
                 </Card>
                 <Card className="border border-slate-800 bg-slate-900/80 shadow-inner">
@@ -194,6 +169,7 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-1">
                     <div className="text-xl font-semibold text-white">{totals.booked}</div>
+                    <p className="mt-1 text-[11px] text-slate-400">Matched PO No received</p>
                   </CardContent>
                 </Card>
                 <Card className="border border-slate-800 bg-slate-900/80 shadow-inner sm:col-span-2">
@@ -205,6 +181,7 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-1">
                     <div className="text-xl font-semibold text-white">{totals.transportNoPO}</div>
+                    <p className="mt-1 text-[11px] text-slate-400">Bookings missing PO numbers</p>
                   </CardContent>
                 </Card>
               </div>
@@ -216,7 +193,7 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           <div className="mb-3 flex items-center justify-between">
             {!collapsed && (
               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                GR to GI Days for Can Dispatch
+                GR Days for Can Dispatch
               </div>
             )}
             <Badge
@@ -277,6 +254,11 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
               </div>
             )}
           </div>
+          {!collapsed && (
+            <div className="mt-2 text-[11px] text-slate-400">
+              Click a bar to filter can-dispatch vehicles on the Dispatch page by GR Days range.
+            </div>
+          )}
         </div>
       </div>
 
