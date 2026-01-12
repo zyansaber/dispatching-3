@@ -30,7 +30,7 @@ import {
   TransportCompany,
   TransportConfig,
 } from "@/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 
 export type SidebarFilter =
@@ -143,7 +143,12 @@ const IndexPage: React.FC = () => {
 
     const counts = buckets.map((bucket) => {
       const count = readyToDispatch.filter((entry) => {
-        const days = Number(entry["Days From GR"] ?? entry["GR to GI Days"] ?? 0) || 0;
+        const rawDays = entry["GR to GI Days"];
+        const days =
+          typeof rawDays === "number"
+            ? rawDays
+            : Number.parseFloat(rawDays == null ? "" : String(rawDays));
+        if (!Number.isFinite(days)) return false;
         const withinMin = days >= bucket.min;
         const withinMax = bucket.max == null ? true : days <= bucket.max;
         return withinMin && withinMax;
@@ -305,12 +310,6 @@ const IndexPage: React.FC = () => {
 
         <div className="min-h-screen w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
           <main className="flex min-h-[calc(100vh-2rem)] flex-col rounded-xl border border-border/70 bg-background shadow-sm">
-            <CardHeader className="border-b border-border/70 pb-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <CardTitle className="text-2xl md:text-3xl">Dispatch Workspace</CardTitle>
-                {loading && <CardDescription className="text-right">Syncing latest data…</CardDescription>}
-              </div>
-            </CardHeader>
             <CardContent className="flex-1 px-4 pb-6">
               <Outlet />
             </CardContent>
