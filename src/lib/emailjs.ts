@@ -2,10 +2,10 @@ const EMAILJS_ENDPOINT = 'https://api.emailjs.com/api/v1.0/email/send';
 
 // EmailJS configuration
 const EMAILJS_CONFIG = {
-  serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID as string | undefined,
-  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string | undefined,
-  reportTemplateId: 'template_99eg2eg',
-  transportTemplateId: 'template_ihncrv9',
+  serviceId: 'service_q3qp9rz',
+  templateId: 'template_99eg2eg',
+  publicKey: 'Ox1_IwykSClDMOhqz',
+  privateKey: 'Dg7xyuMhc-xtKQbROJT7H'
 };
 
 export interface EmailData {
@@ -36,37 +36,6 @@ interface EmailTemplateParams {
   from_name: string;
 }
 
-export interface TransportEmailData {
-  chassisNo: string;
-  soNumber?: string | null;
-  vinNumber?: string | null;
-  sapData?: string | null;
-  scheduledDealer?: string | null;
-  reallocatedTo?: string | null;
-  customer?: string | null;
-  model?: string | null;
-  transportCompany?: string | null;
-  previousCompany?: string | null;
-  actionType: 'new' | 'change';
-}
-
-interface TransportTemplateParams {
-  chassis_no: string;
-  so_number: string;
-  vin_number: string;
-  sap_data: string;
-  scheduled_dealer: string;
-  reallocated_to: string;
-  customer: string;
-  model: string;
-  transport_company: string;
-  previous_company: string;
-  action_type: string;
-  updated_at: string;
-  to_name: string;
-  from_name: string;
-}
-
 const safeText = (value: string | null | undefined, fallback: string) =>
   (value && String(value).trim()) || fallback;
 
@@ -91,30 +60,6 @@ const buildTemplateParams = (data: EmailData): EmailTemplateParams => ({
   from_name: 'Dispatch Dashboard System'
 });
 
-const buildTransportTemplateParams = (data: TransportEmailData): TransportTemplateParams => ({
-  chassis_no: data.chassisNo,
-  so_number: safeText(data.soNumber, 'N/A'),
-  vin_number: safeText(data.vinNumber, 'N/A'),
-  sap_data: safeText(data.sapData, 'N/A'),
-  scheduled_dealer: safeText(data.scheduledDealer, 'N/A'),
-  reallocated_to: safeText(data.reallocatedTo, 'No Reallocation'),
-  customer: safeText(data.customer, 'N/A'),
-  model: safeText(data.model, 'N/A'),
-  transport_company: safeText(data.transportCompany, 'N/A'),
-  previous_company: safeText(data.previousCompany, 'N/A'),
-  action_type: data.actionType,
-  updated_at: new Date().toLocaleString(),
-  to_name: 'Dispatch Team',
-  from_name: 'Dispatch Dashboard System'
-});
-
-const requireConfig = (value: string | undefined, label: string) => {
-  if (!value) {
-    throw new Error(`Missing EmailJS configuration: ${label}`);
-  }
-  return value;
-};
-
 const readErrorMessage = async (response: Response) => {
   const raw = await response.text();
   if (!raw) return `${response.status} ${response.statusText}`.trim();
@@ -132,19 +77,17 @@ const readErrorMessage = async (response: Response) => {
   return raw;
 };
 
-const sendEmailRequest = async (
-  templateParams: EmailTemplateParams | TransportTemplateParams,
-  templateId: string
-): Promise<void> => {
+const sendEmailRequest = async (templateParams: EmailTemplateParams): Promise<void> => {
   const response = await fetch(EMAILJS_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      service_id: requireConfig(EMAILJS_CONFIG.serviceId, 'VITE_EMAILJS_SERVICE_ID'),
-      template_id: templateId,
-      user_id: requireConfig(EMAILJS_CONFIG.publicKey, 'VITE_EMAILJS_PUBLIC_KEY'),
+      service_id: EMAILJS_CONFIG.serviceId,
+      template_id: EMAILJS_CONFIG.templateId,
+      user_id: EMAILJS_CONFIG.publicKey,
+      accessToken: EMAILJS_CONFIG.privateKey,
       template_params: templateParams
     })
   });
@@ -158,13 +101,7 @@ const sendEmailRequest = async (
 export const sendReportEmail = async (data: EmailData): Promise<void> => {
   const templateParams = buildTemplateParams(data);
   console.log('Sending email with params:', templateParams);
-  await sendEmailRequest(templateParams, EMAILJS_CONFIG.reportTemplateId);
-};
-
-export const sendTransportUpdateEmail = async (data: TransportEmailData): Promise<void> => {
-  const templateParams = buildTransportTemplateParams(data);
-  console.log('Sending transport email with params:', templateParams);
-  await sendEmailRequest(templateParams, EMAILJS_CONFIG.transportTemplateId);
+  await sendEmailRequest(templateParams);
 };
 
 export const testEmailConnection = async (): Promise<void> => {
@@ -184,5 +121,5 @@ export const testEmailConnection = async (): Promise<void> => {
     from_name: 'Dispatch Dashboard System'
   };
 
-  await sendEmailRequest(testParams, EMAILJS_CONFIG.reportTemplateId);
+  await sendEmailRequest(testParams);
 };
