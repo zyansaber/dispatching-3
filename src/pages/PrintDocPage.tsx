@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDashboardContext } from "@/pages/Index";
@@ -10,37 +10,68 @@ const formatDate = (value: Date) =>
     day: "2-digit",
   });
 
+const formatDateTime = (value: string) => {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString("en-AU", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const toDateTimeLocal = (value: Date) => {
+  const pad = (num: number) => String(num).padStart(2, "0");
+  return [
+    value.getFullYear(),
+    "-",
+    pad(value.getMonth() + 1),
+    "-",
+    pad(value.getDate()),
+    "T",
+    pad(value.getHours()),
+    ":",
+    pad(value.getMinutes()),
+  ].join("");
+};
+
 const toChassisKey = (value?: string | null) => value?.toString().trim() || "";
 
 const PrintDocPage: React.FC = () => {
   const { dispatchProcessed } = useDashboardContext();
   const [generatedAt, setGeneratedAt] = useState(() => new Date());
+  const [collectionDateTime, setCollectionDateTime] = useState(() => toDateTimeLocal(new Date()));
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedChassis, setSelectedChassis] = useState<Set<string>>(new Set());
   const [titleImageError, setTitleImageError] = useState(false);
+  const [transportCompanyInput, setTransportCompanyInput] = useState("");
+  const [poNumberInput, setPoNumberInput] = useState("");
+  const [driverName, setDriverName] = useState("");
+  const [driverLicense, setDriverLicense] = useState("");
+  const [driverVehicleReg, setDriverVehicleReg] = useState("");
+  const previousTransportLabel = useRef("");
+  const previousPoNumbers = useRef("");
 
-  const bookedRows = useMemo(() => {
-    return dispatchProcessed.filter((entry) => {
-      const poNo = entry["Matched PO No"];
-      return typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo);
-    });
-  }, [dispatchProcessed]);
+  const availableRows = useMemo(() => dispatchProcessed, [dispatchProcessed]);
 
   const filteredBookedRows = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
-    if (!keyword) return bookedRows;
-    return bookedRows.filter((entry) => {
+    if (!keyword) return availableRows;
+    return availableRows.filter((entry) => {
       const chassis = toChassisKey(entry["Chassis No"] || entry.dispatchKey);
       return chassis.toLowerCase().includes(keyword);
     });
-  }, [bookedRows, searchTerm]);
+  }, [availableRows, searchTerm]);
 
   const selectedRows = useMemo(() => {
-    return bookedRows.filter((entry) => {
+    return availableRows.filter((entry) => {
       const chassis = toChassisKey(entry["Chassis No"] || entry.dispatchKey);
       return chassis && selectedChassis.has(chassis);
     });
-  }, [bookedRows, selectedChassis]);
+  }, [availableRows, selectedChassis]);
 
   const transportCompaniesForSelection = useMemo(() => {
     const companies = new Set<string>();
@@ -83,6 +114,22 @@ const PrintDocPage: React.FC = () => {
   const transportCompanyLabel = transportCompaniesForSelection.length
     ? transportCompaniesForSelection.join(", ")
     : "________________________";
+
+  useEffect(() => {
+    const previousLabel = previousTransportLabel.current;
+    if (!transportCompanyInput || transportCompanyInput === previousLabel) {
+      setTransportCompanyInput(transportCompanyLabel);
+    }
+    previousTransportLabel.current = transportCompanyLabel;
+  }, [transportCompanyInput, transportCompanyLabel]);
+
+  useEffect(() => {
+    const previousLabel = previousPoNumbers.current;
+    if (!poNumberInput || poNumberInput === previousLabel) {
+      setPoNumberInput(poNumbers);
+    }
+    previousPoNumbers.current = poNumbers;
+  }, [poNumberInput, poNumbers]);
 
   const renderRows = selectedRows.length
     ? selectedRows
@@ -187,6 +234,48 @@ const PrintDocPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <div className="grid gap-4 rounded-md border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-700 lg:grid-cols-2">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date of collection</label>
+            <Input
+              type="datetime-local"
+              className="mt-2"
+              value={collectionDateTime}
+              onChange={(event) => setCollectionDateTime(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Transport Company</label>
+            <Input
+              className="mt-2"
+              value={transportCompanyInput}
+              onChange={(event) => setTransportCompanyInput(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Purchase Order #</label>
+            <Input className="mt-2" value={poNumberInput} onChange={(event) => setPoNumberInput(event.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Driver’s name</label>
+            <Input className="mt-2" value={driverName} onChange={(event) => setDriverName(event.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Driver License</label>
+            <Input className="mt-2" value={driverLicense} onChange={(event) => setDriverLicense(event.target.value)} />
+          </div>
+          <div className="lg:col-span-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Driver’s vehicle registration number
+            </label>
+            <Input
+              className="mt-2"
+              value={driverVehicleReg}
+              onChange={(event) => setDriverVehicleReg(event.target.value)}
+            />
+          </div>
+        </div>
       </div>
 
       <section className="print-page">
@@ -223,7 +312,7 @@ const PrintDocPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="mt-6">
+          <div className="table-scroll mt-6">
             <table className="print-table">
               <thead>
                 <tr>
@@ -247,23 +336,23 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
               <div className="font-semibold text-slate-900">Date of collection:</div>
-              <div>13/01/2026, 11:58 am</div>
+              <div>{formatDateTime(collectionDateTime) || "________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Transport Company:</div>
-              <div>________________________________________</div>
+              <div>{transportCompanyInput || "________________________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Driver’s name:</div>
-              <div>________________________________________</div>
+              <div>{driverName || "________________________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Driver License:</div>
-              <div>________________________________________</div>
+              <div>{driverLicense || "________________________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Driver’s vehicle registration number:</div>
-              <div>________________________________________</div>
+              <div>{driverVehicleReg || "________________________________________"}</div>
             </div>
           </div>
 
@@ -310,7 +399,7 @@ const PrintDocPage: React.FC = () => {
 
           <div className="mt-8 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>SR Security’s signature: ________________________________________</div>
-            <div>Purchase Order #: {poNumbers || "________________________________________"}</div>
+            <div>Purchase Order #: {poNumberInput || "________________________________________"}</div>
           </div>
 
           <div className="mt-10 text-sm text-slate-500">
@@ -345,7 +434,7 @@ const PrintDocPage: React.FC = () => {
             Record arrival condition and capture signature for transported caravans.
           </p>
 
-          <div className="mt-5">
+          <div className="table-scroll mt-5">
             <table className="print-table">
               <thead>
                 <tr>
@@ -369,7 +458,7 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
               <div className="font-semibold text-slate-900">Arrival Time:</div>
-              <div>____________________________</div>
+              <div>{formatDateTime(collectionDateTime) || "____________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Damage Noted:</div>
@@ -380,11 +469,23 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
               <div className="font-semibold text-slate-900">Transport Company:</div>
-              <div>{transportCompanyLabel}</div>
+              <div>{transportCompanyInput || "________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Purchase Order #:</div>
-              <div>{poNumbers || "________________________"}</div>
+              <div>{poNumberInput || "________________________"}</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver’s name:</div>
+              <div>{driverName || "________________________"}</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver License:</div>
+              <div>{driverLicense || "________________________"}</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver’s vehicle registration number:</div>
+              <div>{driverVehicleReg || "________________________"}</div>
             </div>
           </div>
 
@@ -429,7 +530,7 @@ const PrintDocPage: React.FC = () => {
             Dealer acknowledgement of delivery condition and receipt time.
           </p>
 
-          <div className="mt-5">
+          <div className="table-scroll mt-5">
             <table className="print-table">
               <thead>
                 <tr>
@@ -453,7 +554,7 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
               <div className="font-semibold text-slate-900">Delivery Time:</div>
-              <div>____________________________</div>
+              <div>{formatDateTime(collectionDateTime) || "____________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Damage Noted:</div>
@@ -464,11 +565,23 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
               <div className="font-semibold text-slate-900">Transport Company:</div>
-              <div>{transportCompanyLabel}</div>
+              <div>{transportCompanyInput || "________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Purchase Order #:</div>
-              <div>{poNumbers || "________________________"}</div>
+              <div>{poNumberInput || "________________________"}</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver’s name:</div>
+              <div>{driverName || "________________________"}</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver License:</div>
+              <div>{driverLicense || "________________________"}</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver’s vehicle registration number:</div>
+              <div>{driverVehicleReg || "________________________"}</div>
             </div>
           </div>
 

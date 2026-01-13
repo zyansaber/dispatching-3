@@ -562,9 +562,17 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     dealer?: string | null
   ) => {
     const id = getRowKey(row);
+    const previousCompany = row.TransportCompany || null;
+    const isCompanyChanged = company !== previousCompany;
+    const nextDealer =
+      company !== previousCompany
+        ? null
+        : dealer === undefined
+          ? row.TransportDealer || null
+          : dealer;
     const patch: Partial<ProcessedDispatchEntry> = {
       TransportCompany: company,
-      TransportDealer: dealer === undefined ? row.TransportDealer || null : dealer,
+      TransportDealer: nextDealer,
     };
     // Reset dealer if company changed
     if (company !== row.TransportCompany) {
@@ -576,6 +584,28 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     setError((e) => ({ ...e, [id]: undefined }));
     try {
       await patchDispatch(id, patch);
+      if (company && isCompanyChanged) {
+        try {
+          const emailModule = await loadEmailModule();
+          await emailModule.sendTransportUpdateEmail({
+            chassisNo: row["Chassis No"] || id,
+            soNumber: row["SO Number"] ?? null,
+            vinNumber: resolveVinNumber(row) || null,
+            sapData: row["SAP Data"] ?? null,
+            scheduledDealer: row["Scheduled Dealer"] ?? null,
+            reallocatedTo: row.reallocatedTo ?? null,
+            customer: row.Customer ?? null,
+            model: row.Model ?? null,
+            transportCompany: company,
+            previousCompany,
+            actionType: previousCompany ? "change" : "new",
+          });
+          toast.success(`Transport update email sent for ${row["Chassis No"] || id}.`);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : null;
+          toast.error(message ? `Failed to send transport email: ${message}` : "Failed to send transport email.");
+        }
+      }
     } catch (err: any) {
       setOptimistic((m) => {
         const prev = { ...(m[id] || {}) };
@@ -767,8 +797,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
       <Card className="w-full max-w-full">
         <CardContent className="p-0">
-          <div className="w-full max-w-full overflow-x-hidden">
-            <Table className="w-full table-fixed">
+          <div className="table-scroll w-full max-w-full">
+            <Table className="w-full min-w-max table-fixed">
               {/* 定宽列 */}
               <colgroup>
                 {COLS.map((c) => (
