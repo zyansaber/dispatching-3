@@ -562,18 +562,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     dealer?: string | null
   ) => {
     const id = getRowKey(row);
-    const previousCompany = row.TransportCompany || null;
-    const previousDealer = row.TransportDealer || null;
-    const isCompanyChanged = company !== previousCompany;
-    const nextDealer =
-      company !== previousCompany
-        ? null
-        : dealer === undefined
-          ? row.TransportDealer || null
-          : dealer;
     const patch: Partial<ProcessedDispatchEntry> = {
       TransportCompany: company,
-      TransportDealer: nextDealer,
+      TransportDealer: dealer === undefined ? row.TransportDealer || null : dealer,
     };
     // Reset dealer if company changed
     if (company !== row.TransportCompany) {
@@ -585,27 +576,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     setError((e) => ({ ...e, [id]: undefined }));
     try {
       await patchDispatch(id, patch);
-      if (company && isCompanyChanged) {
-        try {
-          const emailModule = await loadEmailModule();
-          await emailModule.sendTransportUpdateEmail({
-            chassisNo: row["Chassis No"] || id,
-            soNumber: row["SO Number"] ?? null,
-            vinNumber: resolveVinNumber(row) || null,
-            customer: row.Customer ?? null,
-            model: row.Model ?? null,
-            transportCompany: company,
-            transportDealer: patch.TransportDealer ?? null,
-            previousCompany,
-            previousDealer,
-            actionType: previousCompany ? "change" : "new",
-          });
-          toast.success(`Transport update email sent for ${row["Chassis No"] || id}.`);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : null;
-          toast.error(message ? `Failed to send transport email: ${message}` : "Failed to send transport email.");
-        }
-      }
     } catch (err: any) {
       setOptimistic((m) => {
         const prev = { ...(m[id] || {}) };
