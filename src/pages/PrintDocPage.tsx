@@ -10,15 +10,6 @@ const formatDate = (value: Date) =>
     day: "2-digit",
   });
 
-const formatDateTime = (value: Date) =>
-  value.toLocaleString("en-AU", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
 const toChassisKey = (value?: string | null) => value?.toString().trim() || "";
 
 const PrintDocPage: React.FC = () => {
@@ -256,17 +247,29 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
               <div className="font-semibold text-slate-900">Date of collection:</div>
-              <div>{formatDateTime(generatedAt)}</div>
+              <div>13/01/2026, 11:58 am</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Transport Company:</div>
-              <div>{transportCompanyLabel}</div>
+              <div>________________________________________</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver’s name:</div>
+              <div>________________________________________</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver License:</div>
+              <div>________________________________________</div>
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Driver’s vehicle registration number:</div>
+              <div>________________________________________</div>
             </div>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-slate-700">
             <div>Damage Noted: YES / NO</div>
-            <div className="ml-auto">Driver’s signature: ____________________________</div>
+            <div className="ml-auto">Driver’s signature: ________________________________________</div>
           </div>
 
           <div className="mt-8">
@@ -306,8 +309,8 @@ const PrintDocPage: React.FC = () => {
           </div>
 
           <div className="mt-8 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
-            <div>SR Security’s signature: ____________________________</div>
-            <div>Purchase Order #: {poNumbers || "________________________"}</div>
+            <div>SR Security’s signature: ________________________________________</div>
+            <div>Purchase Order #: {poNumbers || "________________________________________"}</div>
           </div>
 
           <div className="mt-10 text-sm text-slate-500">
