@@ -240,6 +240,8 @@
     box-shadow: none;
     min-height: auto;
     page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .print-page:last-child {
