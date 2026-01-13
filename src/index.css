@@ -100,6 +100,24 @@
   }
 }
 
+html {
+  font-size: 125%;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table-scroll table {
+  min-width: max-content;
+  width: 100%;
+  font-size: 1.125rem;
+}
+
+.table-scroll thead th {
+  font-size: 1.35rem;
+}
+
 .print-doc-wrapper {
   background: #f1f5f9;
   padding: 1.5rem 1rem 3rem;
