@@ -126,10 +126,10 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
                 onClick={() => onFilterChange(card.filter as any)}
               >
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600 truncate">{card.label}</CardTitle>
+                  <CardTitle className="text-base font-medium text-slate-600 truncate">{card.label}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
+                  <div className="text-3xl font-semibold text-slate-900">{card.value}</div>
                 </CardContent>
               </Card>
             ))}
@@ -137,7 +137,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
         </div>
       )}
       <div className="space-y-2">
-        <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <div className="text-base font-semibold uppercase tracking-[0.12em] text-slate-400">
           Other
         </div>
         <div className={STATS_GRID}>
@@ -150,17 +150,17 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
               onClick={() => onFilterChange(card.filter as any)}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600 truncate">{card.label}</CardTitle>
+                  <CardTitle className="text-base font-medium text-slate-600 truncate">{card.label}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
+                <div className="text-3xl font-semibold text-slate-900">{card.value}</div>
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
       <div className="space-y-2">
-        <div className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <div className="text-base font-semibold uppercase tracking-[0.12em] text-slate-400">
           Data issue
         </div>
         <div className={STATS_GRID}>
@@ -173,10 +173,10 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
               onClick={() => onFilterChange(card.filter as any)}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600 truncate">{card.label}</CardTitle>
+                  <CardTitle className="text-base font-medium text-slate-600 truncate">{card.label}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-semibold text-slate-900">{card.value}</div>
+                <div className="text-3xl font-semibold text-slate-900">{card.value}</div>
               </CardContent>
             </Card>
           ))}
@@ -562,9 +562,17 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     dealer?: string | null
   ) => {
     const id = getRowKey(row);
+    const previousCompany = row.TransportCompany || null;
+    const isCompanyChanged = company !== previousCompany;
+    const nextDealer =
+      company !== previousCompany
+        ? null
+        : dealer === undefined
+          ? row.TransportDealer || null
+          : dealer;
     const patch: Partial<ProcessedDispatchEntry> = {
       TransportCompany: company,
-      TransportDealer: dealer === undefined ? row.TransportDealer || null : dealer,
+      TransportDealer: nextDealer,
     };
     // Reset dealer if company changed
     if (company !== row.TransportCompany) {
@@ -576,6 +584,28 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     setError((e) => ({ ...e, [id]: undefined }));
     try {
       await patchDispatch(id, patch);
+      if (company && isCompanyChanged) {
+        try {
+          const emailModule = await loadEmailModule();
+          await emailModule.sendTransportUpdateEmail({
+            chassisNo: row["Chassis No"] || id,
+            soNumber: row["SO Number"] ?? null,
+            vinNumber: resolveVinNumber(row) || null,
+            sapData: row["SAP Data"] ?? null,
+            scheduledDealer: row["Scheduled Dealer"] ?? null,
+            reallocatedTo: row.reallocatedTo ?? null,
+            customer: row.Customer ?? null,
+            model: row.Model ?? null,
+            transportCompany: company,
+            previousCompany,
+            actionType: previousCompany ? "change" : "new",
+          });
+          toast.success(`Transport update email sent for ${row["Chassis No"] || id}.`);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : null;
+          toast.error(message ? `Failed to send transport email: ${message}` : "Failed to send transport email.");
+        }
+      }
     } catch (err: any) {
       setOptimistic((m) => {
         const prev = { ...(m[id] || {}) };
@@ -748,17 +778,17 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       {/* 自然标题行（不吸附） */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Dispatch Data</h2>
-          <p className="text-sm text-slate-500">Search by chassis, customer, model, or dealer.</p>
+          <h2 className="text-2xl font-semibold text-slate-900">Dispatch Data</h2>
+          <p className="text-base text-slate-500">Search by chassis, customer, model, or dealer.</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Input
             placeholder="Search chassis, customer, model, dealer..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-72"
+            className="w-full sm:w-72 text-base"
           />
-          <Button variant="outline" className="shrink-0" onClick={exportExcel}>
+          <Button variant="outline" className="shrink-0 text-base" onClick={exportExcel}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -767,8 +797,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
       <Card className="w-full max-w-full">
         <CardContent className="p-0">
-          <div className="w-full max-w-full overflow-x-hidden">
-            <Table className="w-full table-fixed">
+          <div className="table-scroll w-full max-w-full">
+            <Table className="w-full min-w-max table-fixed">
               {/* 定宽列 */}
               <colgroup>
                 {COLS.map((c) => (
