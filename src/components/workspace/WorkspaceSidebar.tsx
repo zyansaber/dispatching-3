@@ -15,6 +15,7 @@ import {
   Printer,
   Repeat,
   ShieldCheck,
+  FileWarning,
   Truck,
 } from "lucide-react";
 import type { SidebarFilter } from "@/pages/Index";
@@ -29,6 +30,7 @@ export type WorkspaceNavItem = {
 const navItems: WorkspaceNavItem[] = [
   { to: "/stock", label: "Stock Sheet", icon: ClipboardList, end: true },
   { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/transport-damage", label: "Transport Damage", icon: FileWarning, end: true },
   { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
 ];

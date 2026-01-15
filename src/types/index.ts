@@ -143,3 +143,23 @@ export interface TransportCompany {
 }
 
 export type TransportConfig = Record<string, TransportCompany>;
+
+/** ----------------------------
+ *  Transport Damage Claims
+ * ----------------------------- */
+
+export interface DamageClaim {
+  id?: string;
+  chassisNumber: string;
+  transportCompanyId?: string | null;
+  transportCompanyName?: string | null;
+  poNumber?: string | null;
+  damageDetails?: string | null;
+  photoUrls?: string[];
+  photoPaths?: string[];
+  completed?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type DamageClaimData = Record<string, Omit<DamageClaim, "id">>;
