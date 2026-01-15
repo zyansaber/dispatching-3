@@ -11,12 +11,6 @@ import {
   off,
 } from "firebase/database";
 import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
-import {
   ReallocationData,
   DispatchData,
   ScheduleData,
@@ -26,8 +20,6 @@ import {
   DispatchingNoteEntry,
   TransportConfig,
   TransportCompany,
-  DamageClaim,
-  DamageClaimData,
 } from "@/types";
 
 // -------------------- Firebase 初始化 --------------------
@@ -44,7 +36,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
-export const storage = getStorage(app);
 
 // -------------------- 工具函数 --------------------
 function escapeKey(key: string) {
@@ -66,13 +57,6 @@ export function transportCompanyRef(companyId?: string | null) {
   return companyId
     ? ref(db, `transportCompanies/${escapeKey(companyId)}`)
     : ref(db, "transportCompanies");
-}
-
-// /transportDamageClaims/<id> 的引用
-export function transportDamageClaimRef(claimId?: string | null) {
-  return claimId
-    ? ref(db, `transportDamageClaims/${escapeKey(claimId)}`)
-    : ref(db, "transportDamageClaims");
 }
 
 // 按底盘号进行“局部更新”
@@ -169,16 +153,6 @@ export const fetchTransportCompanies = async (): Promise<TransportConfig> => {
   }
 };
 
-export const fetchDamageClaims = async (): Promise<DamageClaimData> => {
-  try {
-    const snapshot = await get(ref(db, "transportDamageClaims"));
-    return snapshot.val() || {};
-  } catch (error) {
-    console.error("Error fetching damage claims:", error);
-    return {};
-  }
-};
-
 // -------------------- 实时订阅 --------------------
 export function subscribeDispatch(onChange: (data: DispatchData) => void) {
   const r = ref(db, "Dispatch");
@@ -212,12 +186,6 @@ export function subscribeTransportCompanies(
   return () => off(r, "value", cb);
 }
 
-export function subscribeDamageClaims(onChange: (data: DamageClaimData) => void) {
-  const r = ref(db, "transportDamageClaims");
-  const cb = onValue(r, (snap) => onChange((snap.val() || {}) as DamageClaimData));
-  return () => off(r, "value", cb);
-}
-
 export const upsertTransportCompany = async (
   companyId: string | null,
   data: Partial<TransportCompany>
@@ -235,45 +203,6 @@ export const upsertTransportCompany = async (
 
 export const deleteTransportCompany = async (companyId: string) => {
   await remove(transportCompanyRef(companyId));
-};
-
-export const createDamageClaim = async (
-  data: Omit<DamageClaim, "id" | "createdAt" | "updatedAt">
-): Promise<string> => {
-  const claimRef = push(transportDamageClaimRef());
-  const now = new Date().toISOString();
-  await update(claimRef, {
-    ...data,
-    createdAt: now,
-    updatedAt: now,
-  });
-  return claimRef.key || "";
-};
-
-export const updateDamageClaim = async (
-  claimId: string,
-  data: Partial<DamageClaim>
-): Promise<void> => {
-  const now = new Date().toISOString();
-  await update(transportDamageClaimRef(claimId), {
-    ...data,
-    updatedAt: now,
-  });
-};
-
-export const uploadDamageClaimPhotos = async (
-  claimId: string,
-  files: File[]
-): Promise<Array<{ url: string; path: string }>> => {
-  const uploads = files.map(async (file) => {
-    const filePath = `transport-damage/${claimId}/${Date.now()}-${file.name}`;
-    const fileRef = storageRef(storage, filePath);
-    await uploadBytes(fileRef, file);
-    const url = await getDownloadURL(fileRef);
-    return { url, path: filePath };
-  });
-
-  return Promise.all(uploads);
 };
 
 // -------------------- 业务辅助 --------------------
