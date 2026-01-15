@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import {
@@ -31,8 +31,6 @@ import {
   TransportCompany,
   TransportConfig,
 } from "@/types";
-import { RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
 import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 
@@ -202,7 +200,7 @@ const IndexPage: React.FC = () => {
       unsubNote && unsubNote();
       unsubTransport && unsubTransport();
     };
-  }, [handleRefreshData]);
+  }, []);
 
   useEffect(() => {
     setDispatchProcessed(processDispatchData(dispatchRaw, reallocRaw));
@@ -264,7 +262,7 @@ const IndexPage: React.FC = () => {
     navigate("/dispatch");
   };
 
-  const handleRefreshData = useCallback(async () => {
+  const handleRefreshData = async () => {
     setRefreshing(true);
     try {
       const [d, r, s, n, t] = await Promise.all([
@@ -282,15 +280,7 @@ const IndexPage: React.FC = () => {
     } finally {
       setRefreshing(false);
     }
-  }, []);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      void handleRefreshData();
-    }, 60 * 60 * 1000);
-
-    return () => window.clearInterval(interval);
-  }, [handleRefreshData]);
+  };
 
   const contextValue: DashboardContextValue = {
     dispatchRaw,
@@ -336,18 +326,7 @@ const IndexPage: React.FC = () => {
 
         <div className="min-h-screen w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
           <main className="flex min-h-[calc(100vh-2rem)] flex-col rounded-xl border border-border/70 bg-background shadow-sm">
-            <div className="flex items-center justify-end border-b border-border/60 px-4 py-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void handleRefreshData()}
-                disabled={refreshing}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-                {refreshing ? "Refreshing..." : "Refresh"}
-              </Button>
-            </div>
-            <CardContent className="flex-1 px-4 pb-6 pt-4">
+            <CardContent className="flex-1 px-4 pb-6">
               <Outlet />
             </CardContent>
           </main>
