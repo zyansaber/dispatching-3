@@ -15,7 +15,6 @@ import {
   ref as storageRef,
   uploadBytes,
   getDownloadURL,
-  deleteObject,
 } from "firebase/storage";
 import {
   ReallocationData,
@@ -280,17 +279,6 @@ export const uploadDamageClaimPhotos = async (
   });
 
   return Promise.all(uploads);
-};
-
-export const deleteDamageClaim = async (
-  claimId: string,
-  filePaths: string[] = []
-): Promise<void> => {
-  const uniquePaths = Array.from(new Set(filePaths.filter(Boolean)));
-  await Promise.allSettled(
-    uniquePaths.map((path) => deleteObject(storageRef(storage, path)))
-  );
-  await remove(transportDamageClaimRef(claimId));
 };
 
 // -------------------- 业务辅助 --------------------
