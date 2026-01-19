@@ -278,7 +278,7 @@ const PrintDocPage: React.FC = () => {
         </div>
       </div>
 
-      <section className="print-page print-page--gate-pass">
+      <section className="print-page">
         <div className="print-page__header">
           {!titleImageError ? (
             <img
