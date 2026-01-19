@@ -215,11 +215,6 @@
 }
 
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 12mm;
-  }
-
   body {
     background: #ffffff;
   }
@@ -254,18 +249,11 @@
     box-shadow: none;
     min-height: auto;
     page-break-after: always;
-    break-after: page;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  .print-page + .print-page {
-    page-break-before: always;
-    break-before: page;
-  }
-
   .print-page:last-child {
     page-break-after: auto;
-    break-after: auto;
   }
 }
