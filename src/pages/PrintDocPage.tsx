@@ -570,6 +570,20 @@ const PrintDocPage: React.FC = () => {
             Dealer Signature: ____________________________
           </div>
 
+          <div className="mt-6 flex justify-end text-sm text-slate-700">
+            <div className="flex max-w-xs flex-col items-end gap-2 text-right">
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https%3A%2F%2Fdealerportal.onrender.com%2Focr"
+                alt="Scan to upload POD"
+                className="h-28 w-28 rounded border border-slate-200 bg-white p-1"
+              />
+              <p>
+                Please scan the QR code and upload the signed POD with the chassis number to confirm no damage,
+                then process receipt.
+              </p>
+            </div>
+          </div>
+
           <div className="mt-6 print-note">
             Please scan and return this document to Snowy River Caravan.
           </div>
