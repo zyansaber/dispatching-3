@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDashboardContext } from "@/pages/Index";
 import {
   createDamageClaim,
+  deleteDamageClaim,
   subscribeDamageClaims,
   updateDamageClaim,
   uploadDamageClaimPhotos,
@@ -32,6 +33,14 @@ const getClaimAttachments = (claim: DamageClaim) => {
     name: `Photo ${index + 1}`,
     type: "image/jpeg",
   }));
+};
+
+const getClaimAttachmentPaths = (claim: DamageClaim) => {
+  const attachmentPaths = getClaimAttachments(claim)
+    .map((attachment) => attachment.path)
+    .filter((path): path is string => Boolean(path));
+  const photoPaths = claim.photoPaths || [];
+  return Array.from(new Set([...attachmentPaths, ...photoPaths]));
 };
 
 const buildPrintHtml = (claim: DamageClaim, companyName: string) => {
@@ -119,6 +128,7 @@ const TransportDamageRecordPage: React.FC = () => {
   const [filterCompany, setFilterCompany] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeClaimId, setActiveClaimId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -298,6 +308,24 @@ const TransportDamageRecordPage: React.FC = () => {
     printWindow.focus();
   };
 
+  const handleDeleteClaim = async (claim: DamageClaim) => {
+    if (!claim.id) return;
+    const confirmed = window.confirm(
+      "Delete this damage claim and all related files? This action cannot be undone."
+    );
+    if (!confirmed) return;
+    setIsDeletingId(claim.id);
+    try {
+      await deleteDamageClaim(claim.id, getClaimAttachmentPaths(claim));
+      if (activeClaimId === claim.id) {
+        setModalOpen(false);
+        setActiveClaimId(null);
+      }
+    } finally {
+      setIsDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-border/60 bg-white p-4 shadow-sm">
@@ -374,6 +402,14 @@ const TransportDamageRecordPage: React.FC = () => {
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => handlePrintReport(claim)}>
                           Print Report
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteClaim(claim)}
+                          disabled={isDeletingId === claim.id}
+                        >
+                          {isDeletingId === claim.id ? "Deleting..." : "Delete"}
                         </Button>
                       </div>
                     </TableCell>
@@ -472,13 +508,23 @@ const TransportDamageRecordPage: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   {activeClaim && (
-                    <Button
-                      type="button"
-                      variant={activeClaim.completed ? "secondary" : "default"}
-                      onClick={() => handleToggleComplete(activeClaim)}
-                    >
-                      {activeClaim.completed ? "Reopen Claim" : "Mark Finished"}
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant={activeClaim.completed ? "secondary" : "default"}
+                        onClick={() => handleToggleComplete(activeClaim)}
+                      >
+                        {activeClaim.completed ? "Reopen Claim" : "Mark Finished"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => handleDeleteClaim(activeClaim)}
+                        disabled={isDeletingId === activeClaim.id}
+                      >
+                        {isDeletingId === activeClaim.id ? "Deleting..." : "Delete Claim"}
+                      </Button>
+                    </div>
                   )}
                   <div className="ml-auto flex items-center gap-2">
                     <Button type="submit" disabled={isSubmitting}>
