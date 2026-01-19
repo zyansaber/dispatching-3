@@ -167,6 +167,50 @@
   padding: 2rem 2.5rem 2.25rem;
 }
 
+.print-page--gate-pass .print-page__content {
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.print-page--gate-pass h1 {
+  font-size: 1.45rem;
+}
+
+.print-page--gate-pass .print-table {
+  font-size: 0.72rem;
+}
+
+.print-page--gate-pass .print-table th,
+.print-page--gate-pass .print-table td {
+  padding: 0.4rem 0.45rem;
+}
+
+.print-page--gate-pass .print-page__header {
+  height: 10vh;
+  min-height: 72px;
+  padding: 0.75rem 1.5rem;
+}
+
+.print-page--gate-pass .print-page__title-image {
+  max-height: 80%;
+}
+
+.print-page--gate-pass .print-checklist td:nth-child(2) {
+  width: 140px;
+}
+
+.print-page--gate-pass .print-checklist td:nth-child(3) {
+  width: 220px;
+}
+
+.print-page--gate-pass .print-checklist td {
+  font-size: 0.7rem;
+}
+
+.print-page--gate-pass .print-input-box {
+  min-height: 64px;
+}
+
 .print-table {
   width: 100%;
   border-collapse: collapse;
@@ -215,6 +259,11 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
   body {
     background: #ffffff;
   }
@@ -249,11 +298,18 @@
     box-shadow: none;
     min-height: auto;
     page-break-after: always;
+    break-after: page;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
+  .print-page + .print-page {
+    page-break-before: always;
+    break-before: page;
+  }
+
   .print-page:last-child {
     page-break-after: auto;
+    break-after: auto;
   }
 }
