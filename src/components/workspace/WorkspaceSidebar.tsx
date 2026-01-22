@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   FileWarning,
   Truck,
+  History,
 } from "lucide-react";
 import type { SidebarFilter } from "@/pages/Index";
 
@@ -31,6 +32,7 @@ const navItems: WorkspaceNavItem[] = [
   { to: "/stock", label: "Stock Sheet", icon: ClipboardList, end: true },
   { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard, end: true },
   { to: "/transport-damage", label: "Transport Damage", icon: FileWarning, end: true },
+  { to: "/pgi-history", label: "PGI History", icon: History, end: true },
   { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
 ];
