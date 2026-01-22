@@ -29,7 +29,6 @@ import {
   TransportCompany,
   DamageClaim,
   DamageClaimData,
-  PgiRecordData,
 } from "@/types";
 
 // -------------------- Firebase 初始化 --------------------
@@ -217,12 +216,6 @@ export function subscribeTransportCompanies(
 export function subscribeDamageClaims(onChange: (data: DamageClaimData) => void) {
   const r = ref(db, "transportDamageClaims");
   const cb = onValue(r, (snap) => onChange((snap.val() || {}) as DamageClaimData));
-  return () => off(r, "value", cb);
-}
-
-export function subscribePgiRecords(onChange: (data: PgiRecordData) => void) {
-  const r = ref(db, "pgirecord");
-  const cb = onValue(r, (snap) => onChange((snap.val() || {}) as PgiRecordData));
   return () => off(r, "value", cb);
 }
 
