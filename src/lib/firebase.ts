@@ -562,11 +562,7 @@ export const filterDispatchData = (
   });
 
   if (filter === "snowy") {
-    return data.filter(
-      (e) =>
-        e.reallocatedTo === "Snowy Stock" ||
-        e["Scheduled Dealer"] === "Snowy Stock"
-    );
+    return data.filter((e) => isSnowyStock(e, chassisToReallocatedTo));
   }
   if (filter === "canBeDispatched") {
     return data.filter(
@@ -575,8 +571,7 @@ export const filterDispatchData = (
         !e.OnHold &&
         !e.InvalidStock &&
         !e.TemporaryLeavingWithoutPGI &&
-        !(e.reallocatedTo === "Snowy Stock" ||
-          e["Scheduled Dealer"] === "Snowy Stock")
+        !isSnowyStock(e, chassisToReallocatedTo)
     );
   }
   return data;

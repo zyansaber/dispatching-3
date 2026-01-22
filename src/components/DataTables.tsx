@@ -27,6 +27,15 @@ const STATS_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
 const resolveVinNumber = (entry: ProcessedDispatchEntry) =>
   entry["Vin Number"] ?? (entry as Record<string, any>)["VIN Number"] ?? "";
+const isSnowyStockEntry = (entry: ProcessedDispatchEntry) => {
+  if (entry.reallocatedTo === "Snowy Stock") return true;
+  return (
+    entry["Scheduled Dealer"] === "Snowy Stock" &&
+    entry.Statuscheck === "OK" &&
+    entry.DealerCheck === "OK" &&
+    (!entry.reallocatedTo || entry.reallocatedTo.trim() === "")
+  );
+};
 
 // 列宽（避免左右滚动）
 const COLS = [
@@ -298,8 +307,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             !e.OnHold &&
             !e.TemporaryLeavingWithoutPGI &&
             !e.InvalidStock &&
-            (e.reallocatedTo === "Snowy Stock" ||
-              e["Scheduled Dealer"] === "Snowy Stock")
+            isSnowyStockEntry(e)
         );
       if (activeFilter === "canBeDispatched")
         arr = arr.filter(
@@ -310,7 +318,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             !e.OnHold &&
             !e.TemporaryLeavingWithoutPGI &&
             !e.InvalidStock &&
-            !(e.reallocatedTo === "Snowy Stock" || e["Scheduled Dealer"] === "Snowy Stock")
+            !isSnowyStockEntry(e)
         );
     }
 
