@@ -8,6 +8,7 @@ import StockPage from './pages/StockPage';
 import AdminPage from './pages/AdminPage';
 import PrintDocPage from './pages/PrintDocPage';
 import TransportDamageRecordPage from './pages/TransportDamageRecordPage';
+import PGIHistoryPage from './pages/PGIHistoryPage';
 import NotFound from './pages/NotFound';
 
 const App = () => (
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="dispatch" element={<DispatchPage />} />
           <Route path="print-doc" element={<PrintDocPage />} />
           <Route path="transport-damage" element={<TransportDamageRecordPage />} />
+          <Route path="pgi-history" element={<PGIHistoryPage />} />
           <Route path="reallocation" element={<ReallocationPage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
