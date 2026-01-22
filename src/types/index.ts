@@ -170,24 +170,3 @@ export interface DamageClaim {
 }
 
 export type DamageClaimData = Record<string, Omit<DamageClaim, "id">>;
-
-/** ----------------------------
- *  PGI Records
- * ----------------------------- */
-
-export interface PgiRecordEntry {
-  customer?: string | null;
-  dealer?: string | null;
-  grDateLast?: string | null;
-  grStatus?: string | null;
-  model?: string | null;
-  pgidate?: string | null;
-  poNumber?: string | null;
-  poPrice?: number | string | null;
-  vendorName?: string | null;
-  vinNumber?: string | null;
-  wholesalepo?: number | string | null;
-  [key: string]: unknown;
-}
-
-export type PgiRecordData = Record<string, Record<string, PgiRecordEntry>>;
