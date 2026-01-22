@@ -23,6 +23,8 @@ declare global { interface Window { XLSX?: any } }
 // 统一样式
 const CELL = "text-sm leading-5 whitespace-nowrap overflow-hidden text-ellipsis";
 const CELL_VDIV = "border-r border-slate-200 last:border-r-0"; // 竖向浅分隔
+const SAVE_BUTTON_CLASS =
+  "border border-slate-300 bg-gradient-to-b from-white via-slate-100 to-slate-200 text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_2px_4px_rgba(15,23,42,0.2)] hover:from-white hover:to-slate-200 active:translate-y-px active:shadow-[inset_0_2px_4px_rgba(15,23,42,0.25)]";
 const STATS_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
 const resolveVinNumber = (entry: ProcessedDispatchEntry) =>
@@ -969,7 +971,13 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                 onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                                 onKeyDown={(e) => { if (e.key === "Enter") handleSaveComment(entry); }}
                               />
-                              <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handleSaveComment(entry)}>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className={SAVE_BUTTON_CLASS}
+                                disabled={saving[rowKey]}
+                                onClick={() => handleSaveComment(entry)}
+                              >
                                 Save
                               </Button>
                             </div>
@@ -984,7 +992,13 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                 value={pickupLocal}
                                 onChange={(e) => setPickupDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                               />
-                              <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handleSavePickup(entry)}>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className={SAVE_BUTTON_CLASS}
+                                disabled={saving[rowKey]}
+                                onClick={() => handleSavePickup(entry)}
+                              >
                                 Save
                               </Button>
                             </div>
@@ -1167,7 +1181,13 @@ const OnHoldBoard: React.FC<{
                         onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                         onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
                       />
-                      <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className={SAVE_BUTTON_CLASS}
+                        disabled={saving[rowKey]}
+                        onClick={() => handlers.handleSaveComment(row)}
+                      >
                         Save
                       </Button>
                     </div>
@@ -1182,7 +1202,13 @@ const OnHoldBoard: React.FC<{
                         value={pickupLocal}
                         onChange={(e) => setPickupDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                       />
-                      <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSavePickup(row)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className={SAVE_BUTTON_CLASS}
+                        disabled={saving[rowKey]}
+                        onClick={() => handlers.handleSavePickup(row)}
+                      >
                         Save
                       </Button>
                     </div>
@@ -1273,7 +1299,13 @@ const TemporaryLeavingBoard: React.FC<{
                         onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                         onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
                       />
-                      <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className={SAVE_BUTTON_CLASS}
+                        disabled={saving[rowKey]}
+                        onClick={() => handlers.handleSaveComment(row)}
+                      >
                         Save
                       </Button>
                     </div>
@@ -1367,7 +1399,13 @@ const InvalidStockBoard: React.FC<{
                         onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
                         onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
                       />
-                      <Button size="sm" variant="secondary" disabled={saving[rowKey]} onClick={() => handlers.handleSaveComment(row)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className={SAVE_BUTTON_CLASS}
+                        disabled={saving[rowKey]}
+                        onClick={() => handlers.handleSaveComment(row)}
+                      >
                         Save
                       </Button>
                     </div>
