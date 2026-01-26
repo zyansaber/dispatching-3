@@ -16,6 +16,7 @@ import {
   Repeat,
   ShieldCheck,
   FileWarning,
+  FileText,
   Truck,
   History,
 } from "lucide-react";
@@ -35,6 +36,7 @@ const navItems: WorkspaceNavItem[] = [
   { to: "/pgi-history", label: "PGI History", icon: History, end: true },
   { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
+  { to: "/workflow", label: "Workflow Guide", icon: FileText, end: true },
 ];
 
 interface WorkspaceSidebarProps {
