@@ -16,6 +16,7 @@ import {
   Repeat,
   ShieldCheck,
   FileWarning,
+  FileText,
   Truck,
   History,
 } from "lucide-react";
@@ -35,6 +36,7 @@ const navItems: WorkspaceNavItem[] = [
   { to: "/pgi-history", label: "PGI History", icon: History, end: true },
   { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
+  { to: "/workflow", label: "Workflow Guide", icon: FileText, end: true },
 ];
 
 interface WorkspaceSidebarProps {
@@ -230,56 +232,56 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
               {totals.ready} ready
             </Badge>
           </div>
-          <div className="space-y-2">
-            {grRanges.map((bucket, index) => {
-              const width = Math.max((bucket.count / maxRangeCount) * 100, 6);
-              const color = barColors[index % barColors.length];
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-3">
+            <div className="flex items-end justify-between gap-2">
+              {grRanges.map((bucket, index) => {
+                const width = Math.max((bucket.count / maxRangeCount) * 100, 6);
+                const color = barColors[index % barColors.length];
 
-              return (
-                <Tooltip key={bucket.label} delayDuration={120}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onSelectGRRange?.({
-                          kind: "grRange",
-                          label: bucket.label,
-                          min: bucket.min,
-                          max: bucket.max,
-                        })
-                      }
-                      className={`w-full rounded-md border border-slate-800 bg-slate-900/80 px-3 py-2 text-left transition hover:border-blue-500 ${
-                        collapsed ? "min-w-[48px]" : ""
-                      }`}
-                    >
-                      {collapsed && <span className="sr-only">{bucket.label}</span>}
-                      {!collapsed && (
-                        <div className="flex items-center justify-between text-[11px] text-slate-300">
-                          <span className="font-semibold text-slate-100">{bucket.label}</span>
-                          <span>{bucket.count}</span>
+                return (
+                  <Tooltip key={bucket.label} delayDuration={120}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onSelectGRRange?.({
+                            kind: "grRange",
+                            label: bucket.label,
+                            min: bucket.min,
+                            max: bucket.max,
+                          })
+                        }
+                        className={`group flex flex-1 flex-col items-center justify-end rounded-md border border-slate-800 bg-slate-900/80 px-2 py-2 text-center transition hover:border-blue-500 ${
+                          collapsed ? "min-w-[48px]" : ""
+                        }`}
+                      >
+                        <div className="flex h-24 w-full items-end justify-center">
+                          <div
+                            className="w-6 rounded-t-md transition"
+                            style={{ height: `${width}%`, background: color }}
+                          />
                         </div>
-                      )}
-                      <div className="mt-1 h-2 w-full rounded-full bg-slate-800">
-                        <div
-                          className="h-2 rounded-full transition-all"
-                          style={{ width: `${width}%`, background: color }}
-                        />
-                      </div>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">
-                    <div className="font-semibold">{bucket.label}</div>
-                    <div className="text-slate-300">{bucket.count} vehicles</div>
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-            {!collapsed && (
-              <div className="mt-3 flex items-center justify-between text-[10px] uppercase tracking-[0.08em] text-slate-500">
-                <span>0</span>
-                <span>Max {maxRangeCount}</span>
-              </div>
-            )}
+                        {!collapsed && (
+                          <div className="mt-2 text-[11px] font-semibold text-slate-200">
+                            <span className="inline-block origin-top-left -rotate-30 whitespace-nowrap">
+                              {bucket.label}
+                            </span>
+                          </div>
+                        )}
+                        {!collapsed && (
+                          <div className="text-[10px] text-slate-400">{bucket.count}</div>
+                        )}
+                        {collapsed && <span className="sr-only">{bucket.label}</span>}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs">
+                      <div className="font-semibold">{bucket.label}</div>
+                      <div className="text-slate-300">{bucket.count} caravans</div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
