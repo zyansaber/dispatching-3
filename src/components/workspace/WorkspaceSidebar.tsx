@@ -16,6 +16,7 @@ import {
   Repeat,
   ShieldCheck,
   FileWarning,
+  FileText,
   Truck,
   History,
 } from "lucide-react";
@@ -35,6 +36,7 @@ const navItems: WorkspaceNavItem[] = [
   { to: "/pgi-history", label: "PGI History", icon: History, end: true },
   { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
+  { to: "/workflow", label: "Workflow Guide", icon: FileText, end: true },
 ];
 
 interface WorkspaceSidebarProps {
@@ -220,7 +222,9 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
           <div className="mb-3 flex items-center justify-between">
             {!collapsed && (
               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                GR to GI Days for Can Dispatch
+                <span className="[writing-mode:vertical-rl] rotate-180">
+                  GR to GI Days for Can Dispatch
+                </span>
               </div>
             )}
             <Badge
