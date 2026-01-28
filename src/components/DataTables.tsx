@@ -1123,15 +1123,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="w-full min-w-[140px] border-slate-300 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
-                              disabled={saving[rowKey]}
-                              onClick={() => handleToggleTemporaryLeaving(entry, true)}
-                            >
-                              Temporary leaving
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
                               className="w-full min-w-[140px] border-amber-300 text-sm text-amber-700 shadow-sm hover:bg-amber-50"
                               disabled={saving[rowKey]}
                               onClick={() => handleToggleInvalidStock(entry, true)}
