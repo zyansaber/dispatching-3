@@ -54,6 +54,29 @@ const toCsvValue = (value: string) => {
   return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
 };
 
+const isYes = (value?: string | null) => (value || "").trim().toLowerCase() === "yes";
+
+const renderStars = (score?: string | number | null) => {
+  const numeric =
+    typeof score === "number"
+      ? score
+      : Number.parseFloat(score == null ? "" : String(score));
+  if (!Number.isFinite(numeric)) return <span className="text-xs text-slate-400">-</span>;
+  const normalized = Math.max(0, Math.min(5, (numeric / 10) * 5));
+  const percent = Math.round((normalized / 5) * 100);
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative text-sm leading-none text-slate-200">
+        <span>★★★★★</span>
+        <span className="absolute inset-0 overflow-hidden text-amber-400" style={{ width: `${percent}%` }}>
+          ★★★★★
+        </span>
+      </div>
+      <span className="text-xs font-semibold text-slate-600">{numeric.toFixed(1)}</span>
+    </div>
+  );
+};
+
 const TransportPreferencePage: React.FC = () => {
   const {
     dispatchProcessed,
@@ -288,38 +311,66 @@ const TransportPreferencePage: React.FC = () => {
         </CardHeader>
         <CardContent>
           {preferenceEntries.length ? (
-            <div className="overflow-hidden rounded-lg border border-slate-200">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="w-48">Dealer</TableHead>
-                    <TableHead className="w-48">Destination</TableHead>
-                    <TableHead className="w-20">Pref</TableHead>
-                    <TableHead className="w-56">Vendor</TableHead>
-                    <TableHead>Truck no.</TableHead>
-                    <TableHead>Supplier rating</TableHead>
-                    <TableHead>Bank guarantee</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {preferenceEntries.flatMap(({ dealer, destination, preferences }) =>
-                    preferences.map((pref, index) => {
-                      const vendorLabel = pref.vendorName || transportNameById.get(pref.vendorId || "") || "-";
-                      return (
-                        <TableRow key={`${dealer}-${pref.order}-${index}`}>
-                          <TableCell className="font-medium text-slate-700">{dealer}</TableCell>
-                          <TableCell>{destination || "-"}</TableCell>
-                          <TableCell>#{pref.order ?? index + 1}</TableCell>
-                          <TableCell>{vendorLabel}</TableCell>
-                          <TableCell>{pref.truckNumber || "-"}</TableCell>
-                          <TableCell>{pref.supplierRating || "-"}</TableCell>
-                          <TableCell>{pref.bankGuarantee || "-"}</TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+            <div className="space-y-6">
+              {preferenceEntries.map(({ dealer, destination, preferences }) => (
+                <Card key={dealer} className="border-slate-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base text-slate-900">{dealer}</CardTitle>
+                    <p className="text-xs text-muted-foreground">Preference vendors: {preferences.length}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Basic info</div>
+                      <div className="mt-2 text-sm font-medium text-slate-800">
+                        Destination: <span className="font-semibold">{destination || "-"}</span>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="w-20">Preference</TableHead>
+                            <TableHead className="w-56">Vendor</TableHead>
+                            <TableHead>Capacity</TableHead>
+                            <TableHead>Supplier rating</TableHead>
+                            <TableHead>Bank guarantee</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {preferences.map((pref, index) => {
+                            const vendorLabel =
+                              pref.vendorName || transportNameById.get(pref.vendorId || "") || "-";
+                            return (
+                              <TableRow key={`${dealer}-${pref.order}-${index}`}>
+                                <TableCell className="text-sm font-semibold text-slate-600">
+                                  {pref.order ?? index + 1}
+                                </TableCell>
+                                <TableCell className="font-semibold text-slate-900">{vendorLabel}</TableCell>
+                                <TableCell>
+                                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                                    {pref.truckNumber || "-"}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{renderStars(pref.supplierRating)}</TableCell>
+                                <TableCell>
+                                  {isYes(pref.bankGuarantee) ? (
+                                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                                      Bank guarantee
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">-</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
