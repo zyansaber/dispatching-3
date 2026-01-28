@@ -7,6 +7,7 @@ import {
   push,
   update,
   remove,
+  set,
   onValue,
   off,
 } from "firebase/database";
@@ -27,6 +28,7 @@ import {
   DispatchingNoteEntry,
   TransportConfig,
   TransportCompany,
+  TransportPreferenceData,
   DamageClaim,
   DamageClaimData,
   PgiRecordData,
@@ -75,6 +77,13 @@ export function transportDamageClaimRef(claimId?: string | null) {
   return claimId
     ? ref(db, `transportDamageClaims/${escapeKey(claimId)}`)
     : ref(db, "transportDamageClaims");
+}
+
+// /transportPreferences/<dealer> 的引用
+export function transportPreferenceRef(dealerId?: string | null) {
+  return dealerId
+    ? ref(db, `transportPreferences/${escapeKey(dealerId)}`)
+    : ref(db, "transportPreferences");
 }
 
 // 按底盘号进行“局部更新”
@@ -181,6 +190,16 @@ export const fetchDamageClaims = async (): Promise<DamageClaimData> => {
   }
 };
 
+export const fetchTransportPreferences = async (): Promise<TransportPreferenceData> => {
+  try {
+    const snapshot = await get(ref(db, "transportPreferences"));
+    return snapshot.val() || {};
+  } catch (error) {
+    console.error("Error fetching transport preferences:", error);
+    return {};
+  }
+};
+
 // -------------------- 实时订阅 --------------------
 export function subscribeDispatch(onChange: (data: DispatchData) => void) {
   const r = ref(db, "Dispatch");
@@ -217,6 +236,16 @@ export function subscribeTransportCompanies(
 export function subscribeDamageClaims(onChange: (data: DamageClaimData) => void) {
   const r = ref(db, "transportDamageClaims");
   const cb = onValue(r, (snap) => onChange((snap.val() || {}) as DamageClaimData));
+  return () => off(r, "value", cb);
+}
+
+export function subscribeTransportPreferences(
+  onChange: (data: TransportPreferenceData) => void
+) {
+  const r = ref(db, "transportPreferences");
+  const cb = onValue(r, (snap) =>
+    onChange((snap.val() || {}) as TransportPreferenceData)
+  );
   return () => off(r, "value", cb);
 }
 
@@ -298,6 +327,12 @@ export const deleteDamageClaim = async (
     uniquePaths.map((path) => deleteObject(storageRef(storage, path)))
   );
   await remove(transportDamageClaimRef(claimId));
+};
+
+export const saveTransportPreferences = async (
+  data: TransportPreferenceData
+): Promise<void> => {
+  await set(transportPreferenceRef(), data);
 };
 
 // -------------------- 业务辅助 --------------------

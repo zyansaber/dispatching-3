@@ -17,6 +17,9 @@ import {
   subscribeTransportCompanies,
   upsertTransportCompany,
   deleteTransportCompany,
+  fetchTransportPreferences,
+  subscribeTransportPreferences,
+  saveTransportPreferences,
   getStatusCheckCategory,
   patchDispatchingNote,
   deleteDispatchingNote,
@@ -30,6 +33,7 @@ import {
   ProcessedReallocationEntry,
   TransportCompany,
   TransportConfig,
+  TransportPreferenceData,
 } from "@/types";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,6 +54,7 @@ interface DashboardContextValue {
   loading: boolean;
   refreshing: boolean;
   transportCompanies: TransportConfig;
+  transportPreferences: TransportPreferenceData;
   handleSaveDispatchingNote: (
     chassisNo: string,
     patch: Partial<DispatchingNoteData[string]>
@@ -61,6 +66,7 @@ interface DashboardContextValue {
     data: Partial<TransportCompany>
   ) => Promise<void>;
   handleDeleteTransportCompany: (companyId: string) => Promise<void>;
+  handleSaveTransportPreferences: (data: TransportPreferenceData) => Promise<void>;
   sidebarFilter: SidebarFilter | null;
   setSidebarFilter: (filter: SidebarFilter | null) => void;
 }
@@ -86,6 +92,7 @@ const IndexPage: React.FC = () => {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [transportCompanies, setTransportCompanies] = useState<TransportConfig>({});
+  const [transportPreferences, setTransportPreferences] = useState<TransportPreferenceData>({});
   const [sidebarFilter, setSidebarFilter] = useState<SidebarFilter | null>(null);
 
   const navigate = useNavigate();
@@ -180,18 +187,20 @@ const IndexPage: React.FC = () => {
   const handleRefreshData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [d, r, s, n, t] = await Promise.all([
+      const [d, r, s, n, t, p] = await Promise.all([
         fetchDispatchData(),
         fetchReallocationData(),
         fetchScheduleData(),
         fetchDispatchingNoteData(),
         fetchTransportCompanies(),
+        fetchTransportPreferences(),
       ]);
       setDispatchRaw(d || {});
       setReallocRaw(r || {});
       setSchedule(s || []);
       setDispatchingNote(n || {});
       setTransportCompanies(t || {});
+      setTransportPreferences(p || {});
     } finally {
       setRefreshing(false);
     }
@@ -202,6 +211,7 @@ const IndexPage: React.FC = () => {
     let unsubRealloc: (() => void) | null = null;
     let unsubNote: (() => void) | null = null;
     let unsubTransport: (() => void) | null = null;
+    let unsubTransportPreferences: (() => void) | null = null;
 
     const initialLoad = async () => {
       setLoading(true);
@@ -215,12 +225,16 @@ const IndexPage: React.FC = () => {
     unsubRealloc = subscribeReallocation((r) => setReallocRaw(r || {}));
     unsubNote = subscribeDispatchingNote((n) => setDispatchingNote(n || {}));
     unsubTransport = subscribeTransportCompanies((t) => setTransportCompanies(t || {}));
+    unsubTransportPreferences = subscribeTransportPreferences((p) =>
+      setTransportPreferences(p || {})
+    );
 
     return () => {
       unsubDispatch && unsubDispatch();
       unsubRealloc && unsubRealloc();
       unsubNote && unsubNote();
       unsubTransport && unsubTransport();
+      unsubTransportPreferences && unsubTransportPreferences();
     };
   }, [handleRefreshData]);
 
@@ -279,6 +293,11 @@ const IndexPage: React.FC = () => {
     });
   };
 
+  const handleSaveTransportPreferences = async (data: TransportPreferenceData) => {
+    await saveTransportPreferences(data);
+    setTransportPreferences(data);
+  };
+
   const handleSelectGRRange = (range: SidebarFilter | null) => {
     setSidebarFilter(range);
     navigate("/dispatch");
@@ -303,11 +322,13 @@ const IndexPage: React.FC = () => {
     loading,
     refreshing,
     transportCompanies,
+    transportPreferences,
     handleSaveDispatchingNote,
     handleDeleteDispatchingNote,
     handleRefreshData,
     handleSaveTransportCompany,
     handleDeleteTransportCompany,
+    handleSaveTransportPreferences,
     sidebarFilter,
     setSidebarFilter,
   };
