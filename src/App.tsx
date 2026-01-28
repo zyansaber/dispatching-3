@@ -10,7 +10,6 @@ import PrintDocPage from './pages/PrintDocPage';
 import TransportDamageRecordPage from './pages/TransportDamageRecordPage';
 import PGIHistoryPage from './pages/PGIHistoryPage';
 import WorkflowPage from './pages/WorkflowPage';
-import TransportPreferencePage from './pages/TransportPreferencePage';
 import NotFound from './pages/NotFound';
 
 const App = () => (
@@ -25,7 +24,6 @@ const App = () => (
           <Route path="print-doc" element={<PrintDocPage />} />
           <Route path="workflow" element={<WorkflowPage />} />
           <Route path="transport-damage" element={<TransportDamageRecordPage />} />
-          <Route path="transport-preference" element={<TransportPreferencePage />} />
           <Route path="pgi-history" element={<PGIHistoryPage />} />
           <Route path="reallocation" element={<ReallocationPage />} />
           <Route path="admin" element={<AdminPage />} />
