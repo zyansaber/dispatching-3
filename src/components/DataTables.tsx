@@ -1,4 +1,3 @@
-// src/components/DataTables.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowUpDown, AlertTriangle, Mail, Download } from "lucide-react";
 import { ProcessedDispatchEntry, ProcessedReallocationEntry, TransportConfig } from "@/types";
+import {
+  ProcessedDispatchEntry,
+  ProcessedReallocationEntry,
+  TransportConfig,
+  TransportPreferenceData,
+} from "@/types";
 import {
   getGRDaysColor,
   getGRDaysWidth,
@@ -202,6 +207,7 @@ interface DispatchTableProps {
   allData: ProcessedDispatchEntry[];
   activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock';
   transportCompanies?: TransportConfig;
+  transportPreferences?: TransportPreferenceData;
   grRangeFilter?: SidebarFilter | null;
 }
 
@@ -209,6 +215,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   allData,
   activeFilter = "all",
   transportCompanies = {},
+  transportPreferences = {},
   grRangeFilter = null,
 }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc'; } | null>(null);
@@ -707,8 +714,71 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     })),
   [transportCompanies]);
 
+  const transportNameById = useMemo(() => {
+    const entries = Object.entries(transportCompanies || {});
+    return entries.reduce<Record<string, string>>((acc, [id, company]) => {
+      acc[id] = company.name;
+      return acc;
+    }, {});
+  }, [transportCompanies]);
+
   const findCompanyByName = (name?: string | null) =>
     transportOptions.find((c) => c.name === name);
+
+  const getDealerName = (entry: ProcessedDispatchEntry) =>
+    entry.reallocatedTo?.trim() || entry["Scheduled Dealer"]?.trim() || "";
+
+  const getPreferenceList = (dealer: string) => {
+    const raw = transportPreferences[dealer]?.preferences || [];
+    return raw
+      .slice()
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((pref) => {
+        const vendorName =
+          pref.vendorName ||
+          (pref.vendorId ? transportNameById[pref.vendorId] : "") ||
+          "";
+        return {
+          ...pref,
+          vendorName,
+        };
+      })
+      .filter((pref) => pref.vendorName);
+  };
+
+  const resolveTransportOptions = (dealer: string) => {
+    const dealerPrefs = getPreferenceList(dealer);
+    if (!dealerPrefs.length) return transportOptions.map((option) => option.name);
+    const names = dealerPrefs.map((pref) => pref.vendorName);
+    return Array.from(new Set(names));
+  };
+
+  const isYes = (value?: string | null) =>
+    (value || "").trim().toLowerCase() === "yes";
+
+  const renderStars = (score?: string | number | null) => {
+    const numeric =
+      typeof score === "number"
+        ? score
+        : Number.parseFloat(score == null ? "" : String(score));
+    if (!Number.isFinite(numeric)) return <span className="text-xs text-slate-400">-</span>;
+    const normalized = Math.max(0, Math.min(5, (numeric / 10) * 5));
+    const percent = Math.round((normalized / 5) * 100);
+    return (
+      <div className="flex items-center gap-2">
+        <div className="relative text-sm leading-none text-slate-200">
+          <span>★★★★★</span>
+          <span
+            className="absolute inset-0 overflow-hidden text-amber-400"
+            style={{ width: `${percent}%` }}
+          >
+            ★★★★★
+          </span>
+        </div>
+        <span className="text-xs font-semibold text-slate-600">{numeric.toFixed(1)}</span>
+      </div>
+    );
+  };
 
   const loadXLSX = (): Promise<any> => new Promise((resolve, reject) => {
     if (window.XLSX) return resolve(window.XLSX);
@@ -850,6 +920,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   const hasPickup = pickupLocal.length > 0;
                   const statusLabel = getStatusCheckLabel(entry.Statuscheck);
                   const statusCategory = getStatusCheckCategory(entry.Statuscheck);
+                  const dealerName = getDealerName(entry);
+                  const dealerPreferences = dealerName ? getPreferenceList(dealerName) : [];
+                  const vendorOptions = dealerName ? resolveTransportOptions(dealerName) : transportOptions.map((c) => c.name);
 
                   return (
                     <React.Fragment key={rowKey}>
@@ -895,21 +968,21 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         <TableCell className={`${CELL} ${CELL_VDIV}`}>
                           <div className="flex flex-col gap-2">
                             <select
-                              className="w-full rounded border px-2 py-1 text-sm"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                               value={entry.TransportCompany || ""}
                               onChange={(e) => handleSaveTransport(entry, e.target.value || null)}
                             >
                               <option value="">Select company</option>
-                              {transportOptions.map((c) => (
-                                <option key={c.name} value={c.name}>
-                                  {c.name}
+                              {vendorOptions.map((name) => (
+                                <option key={name} value={name}>
+                                  {name}
                                 </option>
                               ))}
                             </select>
 
                             {findCompanyByName(entry.TransportCompany)?.dealers?.length ? (
                               <select
-                                className="w-full rounded border px-2 py-1 text-sm"
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                                 value={entry.TransportDealer || ""}
                                 onChange={(e) => handleSaveTransport(entry, entry.TransportCompany || null, e.target.value || null)}
                               >
@@ -920,6 +993,46 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                   </option>
                                 ))}
                               </select>
+                            ) : null}
+
+                            {dealerPreferences.length ? (
+                              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-2 text-xs text-slate-600">
+                                <div className="mb-2 flex items-center justify-between">
+                                  <span className="font-semibold text-slate-700">Dealer preferences</span>
+                                  <span className="text-[11px] text-slate-400">{dealerName}</span>
+                                </div>
+                                <div className="space-y-2">
+                                  {dealerPreferences.map((pref) => {
+                                    const isSelected = pref.vendorName === entry.TransportCompany;
+                                    return (
+                                      <div
+                                        key={`${dealerName}-${pref.order}-${pref.vendorName}`}
+                                        className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-2 py-1 ${
+                                          isSelected ? "border-emerald-300 bg-emerald-50" : "border-transparent bg-white"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-[11px] font-semibold text-slate-500">
+                                            {pref.order}
+                                          </span>
+                                          <span className="font-semibold text-slate-800">{pref.vendorName}</span>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                                            Capacity {pref.truckNumber || "-"}
+                                          </span>
+                                          {renderStars(pref.supplierRating)}
+                                          {isYes(pref.bankGuarantee) ? (
+                                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                              Bank guarantee
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             ) : null}
                           </div>
                         </TableCell>
@@ -933,6 +1046,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                               onClick={() => handleToggleOnHold(entry, true)}
                             >
                               On Hold
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full min-w-[140px] border-slate-300 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
+                              disabled={saving[rowKey]}
+                              onClick={() => handleToggleTemporaryLeaving(entry, true)}
+                            >
+                              Temporary leaving
                             </Button>
                             <Button
                               size="sm"
