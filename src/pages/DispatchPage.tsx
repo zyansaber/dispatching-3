@@ -7,6 +7,7 @@ const DispatchPage: React.FC = () => {
     dispatchProcessed,
     stats,
     transportCompanies,
+    transportPreferences,
     sidebarFilter,
   } = useDashboardContext();
   const [activeFilter, setActiveFilter] = useState<
@@ -41,6 +42,7 @@ const DispatchPage: React.FC = () => {
         allData={dispatchProcessed}
         activeFilter={activeFilter}
         transportCompanies={transportCompanies}
+        transportPreferences={transportPreferences}
         grRangeFilter={sidebarFilter?.kind === "grRange" ? sidebarFilter : null}
       />
     </div>
