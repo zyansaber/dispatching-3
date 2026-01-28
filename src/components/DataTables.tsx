@@ -3,14 +3,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowUpDown, AlertTriangle, Mail, Download } from "lucide-react";
-import { ProcessedDispatchEntry, ProcessedReallocationEntry, TransportConfig } from "@/types";
+import { ArrowUpDown, AlertTriangle, Mail, Download, ChevronDown } from "lucide-react";
 import {
   ProcessedDispatchEntry,
   ProcessedReallocationEntry,
   TransportConfig,
   TransportPreferenceData,
 } from "@/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   getGRDaysColor,
   getGRDaysWidth,
@@ -746,15 +755,25 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       .filter((pref) => pref.vendorName);
   };
 
-  const resolveTransportOptions = (dealer: string) => {
-    const dealerPrefs = getPreferenceList(dealer);
-    if (!dealerPrefs.length) return transportOptions.map((option) => option.name);
-    const names = dealerPrefs.map((pref) => pref.vendorName);
-    return Array.from(new Set(names));
-  };
-
   const isYes = (value?: string | null) =>
     (value || "").trim().toLowerCase() === "yes";
+
+  const bookedCountByVendor = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const row of allData) {
+      const company = row.TransportCompany?.trim();
+      if (!company) continue;
+      const poNo = row["Matched PO No"];
+      const hasBooked =
+        !row.OnHold &&
+        !row.TemporaryLeavingWithoutPGI &&
+        !row.InvalidStock &&
+        (typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo));
+      if (!hasBooked) continue;
+      counts[company] = (counts[company] || 0) + 1;
+    }
+    return counts;
+  }, [allData]);
 
   const renderStars = (score?: string | number | null) => {
     const numeric =
@@ -922,7 +941,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   const statusCategory = getStatusCheckCategory(entry.Statuscheck);
                   const dealerName = getDealerName(entry);
                   const dealerPreferences = dealerName ? getPreferenceList(dealerName) : [];
-                  const vendorOptions = dealerName ? resolveTransportOptions(dealerName) : transportOptions.map((c) => c.name);
+                  const selectedCompanyLabel = entry.TransportCompany?.trim() || "";
 
                   return (
                     <React.Fragment key={rowKey}>
@@ -967,19 +986,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Matched PO No"] || ""}>{entry["Matched PO No"] || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`}>
                           <div className="flex flex-col gap-2">
-                            <select
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                              value={entry.TransportCompany || ""}
-                              onChange={(e) => handleSaveTransport(entry, e.target.value || null)}
-                            >
-                              <option value="">Select company</option>
-                              {vendorOptions.map((name) => (
-                                <option key={name} value={name}>
-                                  {name}
-                                </option>
-                              ))}
-                            </select>
-
                             {findCompanyByName(entry.TransportCompany)?.dealers?.length ? (
                               <select
                                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
@@ -996,44 +1002,99 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             ) : null}
 
                             {dealerPreferences.length ? (
-                              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-2 text-xs text-slate-600">
-                                <div className="mb-2 flex items-center justify-between">
-                                  <span className="font-semibold text-slate-700">Dealer preferences</span>
-                                  <span className="text-[11px] text-slate-400">{dealerName}</span>
-                                </div>
-                                <div className="space-y-2">
-                                  {dealerPreferences.map((pref) => {
-                                    const isSelected = pref.vendorName === entry.TransportCompany;
-                                    return (
-                                      <div
-                                        key={`${dealerName}-${pref.order}-${pref.vendorName}`}
-                                        className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-2 py-1 ${
-                                          isSelected ? "border-emerald-300 bg-emerald-50" : "border-transparent bg-white"
-                                        }`}
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-700 shadow-sm hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                                  >
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
+                                        Dealer preferences
+                                      </span>
+                                      <span className="text-sm font-semibold text-slate-800">
+                                        {selectedCompanyLabel || "Select company"}
+                                      </span>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                                  </button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="max-w-2xl">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Dealer preferences</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {dealerName ? `Preferred vendors for ${dealerName}.` : "Preferred vendors."}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <div className="space-y-3">
+                                    {dealerPreferences.map((pref) => {
+                                      const isSelected = pref.vendorName === entry.TransportCompany;
+                                      const bookedCount = bookedCountByVendor[pref.vendorName] || 0;
+                                      return (
+                                        <div
+                                          key={`${dealerName}-${pref.order}-${pref.vendorName}`}
+                                          className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 ${
+                                            isSelected ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"
+                                          }`}
+                                        >
+                                          <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                                                {pref.order}
+                                              </span>
+                                              <span className="text-base font-semibold text-slate-900">
+                                                {pref.vendorName}
+                                              </span>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                                              <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                                                Truck number: {pref.truckNumber || "-"}
+                                              </span>
+                                              {renderStars(pref.supplierRating)}
+                                              {isYes(pref.bankGuarantee) ? (
+                                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-700">
+                                                  Bank guarantee
+                                                </span>
+                                              ) : null}
+                                              {bookedCount > 0 ? (
+                                                <span className="rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-700">
+                                                  Booked {bookedCount}
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                          <AlertDialogAction
+                                            className={isSelected ? "bg-emerald-600 text-white hover:bg-emerald-700" : ""}
+                                            onClick={() => handleSaveTransport(entry, pref.vendorName)}
+                                          >
+                                            {isSelected ? "Selected" : "Select vendor"}
+                                          </AlertDialogAction>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  {entry.TransportCompany ? (
+                                    <div className="flex flex-wrap justify-between gap-2">
+                                      <AlertDialogAction
+                                        className="border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                                        onClick={() => handleSaveTransport(entry, null)}
                                       >
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-[11px] font-semibold text-slate-500">
-                                            {pref.order}
-                                          </span>
-                                          <span className="font-semibold text-slate-800">{pref.vendorName}</span>
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                                            Capacity {pref.truckNumber || "-"}
-                                          </span>
-                                          {renderStars(pref.supplierRating)}
-                                          {isYes(pref.bankGuarantee) ? (
-                                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                                              Bank guarantee
-                                            </span>
-                                          ) : null}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                                        Clear selection
+                                      </AlertDialogAction>
+                                      <AlertDialogCancel>Close</AlertDialogCancel>
+                                    </div>
+                                  ) : (
+                                    <div className="flex justify-end">
+                                      <AlertDialogCancel>Close</AlertDialogCancel>
+                                    </div>
+                                  )}
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            ) : (
+                              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                                No dealer preferences available.
                               </div>
-                            ) : null}
+                            )}
                           </div>
                         </TableCell>
 
