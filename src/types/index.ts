@@ -145,6 +145,26 @@ export interface TransportCompany {
 export type TransportConfig = Record<string, TransportCompany>;
 
 /** ----------------------------
+ *  Transport Preferences（/transportPreferences）
+ * ----------------------------- */
+
+export interface TransportPreferenceItem {
+  order: number;
+  vendorId?: string | null;
+  vendorName?: string | null;
+  truckNumber?: string | null;
+  supplierRating?: string | null;
+  bankGuarantee?: string | null;
+}
+
+export interface TransportPreferenceEntry {
+  destination?: string | null;
+  preferences?: TransportPreferenceItem[];
+}
+
+export type TransportPreferenceData = Record<string, TransportPreferenceEntry>;
+
+/** ----------------------------
  *  Transport Damage Claims
  * ----------------------------- */
 
