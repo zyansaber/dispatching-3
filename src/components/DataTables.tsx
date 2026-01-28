@@ -4,7 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowUpDown, AlertTriangle, Mail, Download } from "lucide-react";
-import { ProcessedDispatchEntry, ProcessedReallocationEntry, TransportConfig } from "@/types";
+import {
+  ProcessedDispatchEntry,
+  ProcessedReallocationEntry,
+  TransportConfig,
+  TransportPreferenceData,
+} from "@/types";
 import {
   ProcessedDispatchEntry,
   ProcessedReallocationEntry,
