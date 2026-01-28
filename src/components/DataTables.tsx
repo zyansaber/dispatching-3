@@ -230,6 +230,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc'; } | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [reportNotes, setReportNotes] = useState<Record<string, string>>({});
 
   // 行内编辑
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
@@ -648,6 +649,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   const handleReportError = async (entry: ProcessedDispatchEntry) => {
     const chassisNo = entry["Chassis No"] || entry.dispatchKey || "";
     if (!chassisNo) return;
+    const note = (reportNotes[chassisNo] || "").trim();
     setSendingEmail(chassisNo);
     try {
            const emailModule = await loadEmailModule();
@@ -662,6 +664,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           statusCheck: entry.Statuscheck,
           dealerCheck: entry.DealerCheck,
           grDays: entry["GR to GI Days"],
+          errorNote: note || null,
         });
         toast.success(`Report sent for ${chassisNo}.`);
       } catch (error) {
@@ -669,7 +672,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         toast.error(message ? `Failed to send email report: ${message}` : "Failed to send email report.");
       }
       try {
-        await reportError(chassisNo, "Dealer check mismatch");
+        await reportError(chassisNo, note || "Dealer check mismatch");
       } catch (error) {
         const message = error instanceof Error ? error.message : null;
         toast.error(message ? `Failed to record report: ${message}` : "Failed to record report.");
@@ -1221,25 +1224,38 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             {/* Actions */}
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-[13px] text-slate-600 w-20 shrink-0">Actions</span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleReportError(entry)}
-                                disabled={sendingEmail === chassisNo}
-                                className="inline-flex items-center gap-1 text-xs"
-                              >
-                                {sendingEmail === chassisNo ? (
-                                  <>
-                                    <Mail className="h-3 w-3 animate-pulse" />
-                                    <span className="hidden sm:inline">Sending...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <AlertTriangle className="h-3 w-3" />
-                                    <span className="hidden sm:inline">Report</span>
-                                  </>
-                                )}
-                              </Button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Input
+                                  value={reportNotes[chassisNo] ?? ""}
+                                  onChange={(event) =>
+                                    setReportNotes((prev) => ({
+                                      ...prev,
+                                      [chassisNo]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder="Error note"
+                                  className="h-8 w-44 text-xs"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleReportError(entry)}
+                                  disabled={sendingEmail === chassisNo}
+                                  className="inline-flex items-center gap-1 text-xs"
+                                >
+                                  {sendingEmail === chassisNo ? (
+                                    <>
+                                      <Mail className="h-3 w-3 animate-pulse" />
+                                      <span className="hidden sm:inline">Sending...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <AlertTriangle className="h-3 w-3" />
+                                      <span className="hidden sm:inline">Report</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </TableCell>
