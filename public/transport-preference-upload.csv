@@ -1,0 +1,153 @@
+Dealer,Destination,PreferenceOrder,TransportCompanyId,TransportCompanyName,TruckNumber,SupplierRating,BankGuarantee
+ABCO,Coffs Harbour (NSW),1,,Wardys,1,9.0,No
+ABCO,Coffs Harbour (NSW),2,,RV Transport,7,9.8,No
+ABCO,Coffs Harbour (NSW),3,,AC Transport,13,9.4,No
+ABCO,Coffs Harbour (NSW),4,,Steve Watts,1,9.4,No
+ABCO,Coffs Harbour (NSW),5,,Brohood,3,6.7,Yes
+ABCO,Coffs Harbour (NSW),6,,Captivation,1,8.9,No
+ABCO,Coffs Harbour (NSW),7,,Straightshot,1,8.5,Yes
+ABCO,Coffs Harbour (NSW),8,,Rescue 6 Towing,3,8.6,No
+Snowy Newcastle,Heatherbrae (NSW),1,,Wardys,1,9.0,No
+Snowy Newcastle,Heatherbrae (NSW),2,,MJO,2,9.1,No
+Snowy Newcastle,Heatherbrae (NSW),3,,Brohood,3,6.7,Yes
+Snowy Newcastle,Heatherbrae (NSW),4,,Captivation,1,8.9,No
+Snowy Newcastle,Heatherbrae (NSW),5,,RV Transport,7,9.8,No
+Snowy Newcastle,Heatherbrae (NSW),6,,AC Transport,13,9.4,No
+Snowy Newcastle,Heatherbrae (NSW),7,,LDA,6,6.4,Yes
+Snowy Newcastle,Heatherbrae (NSW),8,,Straightshot,1,8.5,Yes
+Newcastle RV,Beresfield (NSW),1,,Wardys,1,9.0,No
+Newcastle RV,Beresfield (NSW),2,,MJO,2,9.1,No
+Newcastle RV,Beresfield (NSW),3,,Brohood,3,6.7,Yes
+Newcastle RV,Beresfield (NSW),4,,Captivation,1,8.9,No
+Newcastle RV,Beresfield (NSW),5,,RV Transport,7,9.8,No
+Newcastle RV,Beresfield (NSW),6,,AC Transport,13,9.4,No
+Newcastle RV,Beresfield (NSW),7,,LDA,6,6.4,Yes
+Newcastle RV,Beresfield (NSW),8,,BCT,7,5.3,Yes
+Auswide,Nowra (NSW),1,,Wardys,1,9.0,No
+Auswide,Nowra (NSW),2,,MJO,2,9.1,No
+Auswide,Nowra (NSW),3,,Brohood,3,6.7,Yes
+Auswide,Nowra (NSW),4,,RV Transport,7,9.8,No
+Auswide,Nowra (NSW),5,,Captivation,1,8.9,No
+Auswide,Nowra (NSW),6,,AC Transport,13,9.4,No
+Auswide,Nowra (NSW),7,,Rescue 6 Towing,3,8.6,No
+Auswide,Nowra (NSW),8,,,
+Caravan Hub,Townsville (QLD),1,,Wardys,1,9.0,No
+Caravan Hub,Townsville (QLD),2,,MJO,2,9.1,No
+Caravan Hub,Townsville (QLD),3,,Brohood,3,6.7,Yes
+Caravan Hub,Townsville (QLD),4,,CBC,60,8.2,Yes
+Caravan Hub,Townsville (QLD),5,,Steve Watts,1,9.4,No
+Caravan Hub,Townsville (QLD),6,,Rescue 6 Towing,3,8.6,No
+Caravan Hub,Townsville (QLD),7,,LDA,6,6.4,Yes
+Caravan Hub,Townsville (QLD),8,,,
+NEWGEN,Gympie (QLD),1,,Wardys,1,9.0,No
+NEWGEN,Gympie (QLD),2,,MJO,2,9.1,No
+NEWGEN,Gympie (QLD),3,,LDA,6,6.4,Yes
+NEWGEN,Gympie (QLD),4,,Captivation,1,8.9,No
+NEWGEN,Gympie (QLD),5,,RV Transport,7,9.8,No
+NEWGEN,Gympie (QLD),6,,Straightshot,1,8.5,Yes
+NEWGEN,Gympie (QLD),7,,Rescue 6 Towing,3,8.6,No
+NEWGEN,Gympie (QLD),8,,,
+GreenRV (Forest Glen),Forest Glen (QLD),1,,Wardys,1,9.0,No
+GreenRV (Forest Glen),Forest Glen (QLD),2,,MJO,2,9.1,No
+GreenRV (Forest Glen),Forest Glen (QLD),3,,Brohood,3,6.7,Yes
+GreenRV (Forest Glen),Forest Glen (QLD),4,,LDA,6,6.4,Yes
+GreenRV (Forest Glen),Forest Glen (QLD),5,,Steve Watts,1,9.4,No
+GreenRV (Forest Glen),Forest Glen (QLD),6,,AC Transport,,9.4,No
+GreenRV (Forest Glen),Forest Glen (QLD),7,,,
+GreenRV (Forest Glen),Forest Glen (QLD),8,,,
+GreenRV (Slacks Creek),Slacks Creek (QLD),1,,Wardys,1,9.0,No
+GreenRV (Slacks Creek),Slacks Creek (QLD),2,,MJO,2,9.1,No
+GreenRV (Slacks Creek),Slacks Creek (QLD),3,,LDA,6,6.4,Yes
+GreenRV (Slacks Creek),Slacks Creek (QLD),4,,Steve Watts,1,9.4,No
+GreenRV (Slacks Creek),Slacks Creek (QLD),5,,Brohood,3,6.7,Yes
+GreenRV (Slacks Creek),Slacks Creek (QLD),6,,Camerons,,9.6,No
+GreenRV (Slacks Creek),Slacks Creek (QLD),7,,AC Transport,13,9.4,No
+GreenRV (Slacks Creek),Slacks Creek (QLD),8,,Straightshot,1,8.5,Yes
+Snowy Bundaberg,Bundaberg (QLD),1,,Wardys,1,9.0,No
+Snowy Bundaberg,Bundaberg (QLD),2,,RV Transport,7,9.8,No
+Snowy Bundaberg,Bundaberg (QLD),3,,MJO,2,9.1,No
+Snowy Bundaberg,Bundaberg (QLD),4,,LDA,6,6.4,Yes
+Snowy Bundaberg,Bundaberg (QLD),5,,LDA,6,6.4,Yes
+Snowy Bundaberg,Bundaberg (QLD),6,,Steve Watts,1,9.4,No
+Snowy Bundaberg,Bundaberg (QLD),7,,Brohood,3,6.7,Yes
+Snowy Bundaberg,Bundaberg (QLD),8,,,
+Traralgon,Traralgon (VIC),1,,Wardys,1,9.0,No
+Traralgon,Traralgon (VIC),2,,RV Transport,7,9.8,No
+Traralgon,Traralgon (VIC),3,,MJO,2,9.1,No
+Traralgon,Traralgon (VIC),4,,Brohood,3,6.7,Yes
+Traralgon,Traralgon (VIC),5,,AMR,2,9.6,No
+Traralgon,Traralgon (VIC),6,,2 Up Towing,2,9.6,No
+Traralgon,Traralgon (VIC),7,,CBC,60,8.2,Yes
+Traralgon,Traralgon (VIC),8,,BCT,7,5.3,Yes
+Toowoomba,Toowoomba (QLD),1,,Wardys,1,9.0,No
+Toowoomba,Toowoomba (QLD),2,,MJO,2,9.1,No
+Toowoomba,Toowoomba (QLD),3,,Brohood,3,6.7,Yes
+Toowoomba,Toowoomba (QLD),4,,AC Transport,13,9.4,No
+Toowoomba,Toowoomba (QLD),5,,RV Transport,7,9.8,No
+Toowoomba,Toowoomba (QLD),6,,Steve Watts,1,9.4,No
+Toowoomba,Toowoomba (QLD),7,,Captivation,1,8.9,No
+Toowoomba,Toowoomba (QLD),8,,LDA,6,6.4,Yes
+Bendigo CC,Bendigo (VIC),1,,Wardys,1,9.0,No
+Bendigo CC,Bendigo (VIC),2,,MJO,2,9.1,No
+Bendigo CC,Bendigo (VIC),3,,Brohood,3,6.7,Yes
+Bendigo CC,Bendigo (VIC),4,,RV Transport,7,9.8,No
+Bendigo CC,Bendigo (VIC),5,,LDA,6,6.4,Yes
+Bendigo CC,Bendigo (VIC),6,,AMR,1,9.6,No
+Bendigo CC,Bendigo (VIC),7,,2 Up Towing,2,9.6,No
+Bendigo CC,Bendigo (VIC),8,,Rescue 6 Towing,3,8.6,No
+Warrnambool,Warrnambool (VIC),1,,Wardys,1,9.0,No
+Warrnambool,Warrnambool (VIC),2,,MJO,2,9.1,No
+Warrnambool,Warrnambool (VIC),3,,Brohood,3,6.7,Yes
+Warrnambool,Warrnambool (VIC),4,,Rescue 6 Towing,3,8.6,No
+Warrnambool,Warrnambool (VIC),5,,AMR,2,9.6,No
+Warrnambool,Warrnambool (VIC),6,,2 Up Towing,2,9.6,No
+Warrnambool,Warrnambool (VIC),7,,2 Up Towing,2,9.6,No
+Warrnambool,Warrnambool (VIC),8,,CBC,60,8.2,Yes
+Frankston,Frankston (VIC),1,,Wardys,1,9.0,No
+Frankston,Frankston (VIC),2,,MJO,2,9.1,No
+Frankston,Frankston (VIC),3,,RV Transport,7,9.8,No
+Frankston,Frankston (VIC),4,,Brohood,3,6.7,Yes
+Frankston,Frankston (VIC),5,,AMR,2,9.6,No
+Frankston,Frankston (VIC),6,,2 Up Towing,2,9.6,No
+Frankston,Frankston (VIC),7,,Rescue 6 Towing,3,8.6,No
+Frankston,Frankston (VIC),8,,BCT,7,5.3,Yes
+Snowy Geelong,Geelong (VIC),1,,Wardys,1,9.0,No
+Snowy Geelong,Geelong (VIC),2,,MJO,2,9.1,No
+Snowy Geelong,Geelong (VIC),3,,RV Transport,7,9.8,No
+Snowy Geelong,Geelong (VIC),4,,Brohood,3,6.7,Yes
+Snowy Geelong,Geelong (VIC),5,,AMR,2,9.6,No
+Snowy Geelong,Geelong (VIC),6,,2 Up Towing,2,9.6,No
+Snowy Geelong,Geelong (VIC),7,,BCT,7,5.3,Yes
+Snowy Geelong,Geelong (VIC),8,,Rescue 6 Towing,3,8.6,No
+Snowy Wangaratta,Wangaratta (VIC),1,,Wardys,1,9.0,No
+Snowy Wangaratta,Wangaratta (VIC),2,,RV Transport,7,9.8,No
+Snowy Wangaratta,Wangaratta (VIC),3,,MJO,2,9.1,No
+Snowy Wangaratta,Wangaratta (VIC),4,,Rescue 6 Towing,3,8.6,No
+Snowy Wangaratta,Wangaratta (VIC),5,,LDA,6,6.4,Yes
+Snowy Wangaratta,Wangaratta (VIC),6,,BCT,7,5.3,Yes
+Snowy Wangaratta,Wangaratta (VIC),7,,AMR,1,9.6,No
+Snowy Wangaratta,Wangaratta (VIC),8,,2 Up Towing,2,9.6,No
+Destiny RV / Dario,St Marys (SA),1,,Wardys,1,9.0,No
+Destiny RV / Dario,St Marys (SA),2,,MJO,2,9.1,No
+Destiny RV / Dario,St Marys (SA),3,,Brohood,3,6.7,Yes
+Destiny RV / Dario,St Marys (SA),4,,AC Transport,13,9.4,No
+Destiny RV / Dario,St Marys (SA),5,,RV Transport,7,9.8,No
+Destiny RV / Dario,St Marys (SA),6,,BCT,7,5.3,Yes
+Destiny RV / Dario,St Marys (SA),7,,CBC,60,8.2,Yes
+Destiny RV / Dario,St Marys (SA),8,,Rescue 6 Towing,3,8.6,No
+Perth,St James (WA),1,,Wardys,1,9.0,No
+Perth,St James (WA),2,,MJO,2,9.1,No
+Perth,St James (WA),3,,Brohood,3,6.7,Yes
+Perth,St James (WA),4,,CBC,60,8.2,Yes
+Perth,St James (WA),5,,BCT,20,5.3,Yes
+Perth,St James (WA),6,,LDA,6,6.4,Yes
+Perth,St James (WA),7,,RV Transport,7,9.8,No
+Perth,St James (WA),8,,Rescue 6 Towing,3,8.6,No
+Launceston,Snowy River Launceston,1,,Action Towing,2,10.0,No
+Launceston,Snowy River Launceston,2,,,
+Launceston,Snowy River Launceston,3,,,
+Launceston,Snowy River Launceston,4,,,
+Launceston,Snowy River Launceston,5,,,
+Launceston,Snowy River Launceston,6,,,
+Launceston,Snowy River Launceston,7,,,
+Launceston,Snowy River Launceston,8,,,
