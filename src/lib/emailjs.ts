@@ -18,7 +18,6 @@ export interface EmailData {
   statusCheck?: string | null;
   dealerCheck?: string | null;
   grDays?: number | null;
-  errorNote?: string | null;
 }
 
 interface EmailTemplateParams {
@@ -33,7 +32,6 @@ interface EmailTemplateParams {
   gr_days: number;
   report_date: string;
   issue_summary: string;
-  error_note: string;
   to_name: string;
   from_name: string;
 }
@@ -77,26 +75,21 @@ const toSafeNumber = (value: number | string | null | undefined, fallback = 0) =
   return Number.isFinite(num as number) ? (num as number) : fallback;
 };
 
-const buildTemplateParams = (data: EmailData): EmailTemplateParams => {
-  const fallbackSummary = `Dealer Check Mismatch detected for chassis ${data.chassisNo}`;
-  const summary = safeText(data.errorNote, fallbackSummary);
-  return {
-    chassis_no: data.chassisNo,
-    sap_data: safeText(data.sapData, 'N/A'),
-    scheduled_dealer: safeText(data.scheduledDealer, 'N/A'),
-    reallocated_to: safeText(data.reallocatedTo, 'No Reallocation'),
-    customer: safeText(data.customer, 'N/A'),
-    model: safeText(data.model, 'N/A'),
-    status_check: safeText(data.statusCheck, 'Unknown'),
-    dealer_check: safeText(data.dealerCheck, 'Unknown'),
-    gr_days: toSafeNumber(data.grDays, 0),
-    report_date: new Date().toLocaleString(),
-    issue_summary: summary,
-    error_note: safeText(data.errorNote, 'N/A'),
-    to_name: 'Dispatch Team',
-    from_name: 'Dispatch Dashboard System'
-  };
-};
+const buildTemplateParams = (data: EmailData): EmailTemplateParams => ({
+  chassis_no: data.chassisNo,
+  sap_data: safeText(data.sapData, 'N/A'),
+  scheduled_dealer: safeText(data.scheduledDealer, 'N/A'),
+  reallocated_to: safeText(data.reallocatedTo, 'No Reallocation'),
+  customer: safeText(data.customer, 'N/A'),
+  model: safeText(data.model, 'N/A'),
+  status_check: safeText(data.statusCheck, 'Unknown'),
+  dealer_check: safeText(data.dealerCheck, 'Unknown'),
+  gr_days: toSafeNumber(data.grDays, 0),
+  report_date: new Date().toLocaleString(),
+  issue_summary: `Dealer Check Mismatch detected for chassis ${data.chassisNo}`,
+  to_name: 'Dispatch Team',
+  from_name: 'Dispatch Dashboard System'
+});
 
 const buildTransportTemplateParams = (data: TransportEmailData): TransportTemplateParams => ({
   chassis_no: data.chassisNo,
@@ -187,7 +180,6 @@ export const testEmailConnection = async (): Promise<void> => {
     gr_days: 0,
     report_date: new Date().toLocaleString(),
     issue_summary: 'Email connection test',
-    error_note: 'Test error note',
     to_name: 'Test Recipient',
     from_name: 'Dispatch Dashboard System'
   };

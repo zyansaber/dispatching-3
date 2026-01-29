@@ -77,15 +77,6 @@ const renderStars = (score?: string | number | null) => {
   );
 };
 
-type DealerFormState = {
-  order: string;
-  vendorName: string;
-  truckNumber: string;
-  supplierRating: string;
-  bankGuarantee: boolean;
-  editingIndex: number | null;
-};
-
 const TransportPreferencePage: React.FC = () => {
   const {
     dispatchProcessed,
@@ -95,10 +86,6 @@ const TransportPreferencePage: React.FC = () => {
   } = useDashboardContext();
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [dealerQuery, setDealerQuery] = useState("");
-  const [newDealerName, setNewDealerName] = useState("");
-  const [newDealerDestination, setNewDealerDestination] = useState("");
-  const [dealerForms, setDealerForms] = useState<Record<string, DealerFormState>>({});
 
   const transportOptions = useMemo(
     () =>
@@ -148,137 +135,6 @@ const TransportPreferencePage: React.FC = () => {
       })
       .sort((a, b) => a.dealer.localeCompare(b.dealer));
   }, [transportPreferences]);
-
-  const filteredPreferenceEntries = useMemo(() => {
-    const query = dealerQuery.trim().toLowerCase();
-    if (!query) return preferenceEntries;
-    return preferenceEntries.filter((entry) => entry.dealer.toLowerCase().includes(query));
-  }, [dealerQuery, preferenceEntries]);
-
-  const defaultDealerForm: DealerFormState = {
-    order: "",
-    vendorName: "",
-    truckNumber: "",
-    supplierRating: "",
-    bankGuarantee: false,
-    editingIndex: null,
-  };
-
-  const clonePreferenceData = (data: TransportPreferenceData): TransportPreferenceData => {
-    const next: TransportPreferenceData = {};
-    Object.entries(data || {}).forEach(([dealer, entry]) => {
-      next[dealer] = {
-        destination: entry.destination ?? null,
-        preferences: (entry.preferences || []).map((pref) => ({ ...pref })),
-      };
-    });
-    return next;
-  };
-
-  const updateDealerForm = (dealer: string, patch: Partial<DealerFormState>) => {
-    setDealerForms((prev) => ({
-      ...prev,
-      [dealer]: {
-        ...defaultDealerForm,
-        ...prev[dealer],
-        ...patch,
-      },
-    }));
-  };
-
-  const resetDealerForm = (dealer: string) => {
-    setDealerForms((prev) => ({
-      ...prev,
-      [dealer]: { ...defaultDealerForm },
-    }));
-  };
-
-  const handleAddDealer = async () => {
-    const name = newDealerName.trim();
-    if (!name) {
-      toast.error("Please enter a dealer name.");
-      return;
-    }
-    const existing = Object.keys(transportPreferences || {}).find(
-      (dealer) => dealer.toLowerCase() === name.toLowerCase()
-    );
-    if (existing) {
-      toast.error("Dealer already exists.");
-      return;
-    }
-
-    const next = clonePreferenceData(transportPreferences || {});
-    next[name] = {
-      destination: newDealerDestination.trim() || null,
-      preferences: [],
-    };
-
-    try {
-      await handleSaveTransportPreferences(next);
-      toast.success(`Dealer ${name} added.`);
-      setNewDealerName("");
-      setNewDealerDestination("");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to add dealer.";
-      toast.error(message);
-    }
-  };
-
-  const handleSaveVendor = async (
-    dealer: string,
-    preferences: TransportPreferenceItem[]
-  ) => {
-    const form = dealerForms[dealer] ?? defaultDealerForm;
-    const vendorName = form.vendorName.trim();
-    if (!vendorName) {
-      toast.error("Please enter a vendor name.");
-      return;
-    }
-
-    const orderValue = form.order.trim();
-    const order = orderValue
-      ? Number.parseInt(orderValue, 10)
-      : preferences.length + 1;
-
-    if (!Number.isFinite(order) || order < 1 || order > MAX_PREFERENCES) {
-      toast.error(`Order must be between 1 and ${MAX_PREFERENCES}.`);
-      return;
-    }
-
-    const vendorId = transportIdByName.get(vendorName.toLowerCase()) || null;
-    const nextPreference: TransportPreferenceItem = {
-      order,
-      vendorId,
-      vendorName,
-      truckNumber: form.truckNumber.trim() || null,
-      supplierRating: form.supplierRating.trim() || null,
-      bankGuarantee: form.bankGuarantee ? "Yes" : null,
-    };
-
-    const next = clonePreferenceData(transportPreferences || {});
-    const entry = next[dealer] || { destination: null, preferences: [] };
-    const nextPreferences = preferences.slice();
-
-    if (form.editingIndex != null) {
-      nextPreferences[form.editingIndex] = nextPreference;
-    } else {
-      nextPreferences.push(nextPreference);
-    }
-
-    entry.preferences = nextPreferences
-      .slice()
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    next[dealer] = entry;
-
-    try {
-      await handleSaveTransportPreferences(next);
-      toast.success(form.editingIndex != null ? "Vendor updated." : "Vendor added.");
-      resetDealerForm(dealer);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save vendor.";
-      toast.error(message);
-    }
-  };
 
   const handleDownloadTemplate = () => {
     const rows: string[] = [];
@@ -408,7 +264,7 @@ const TransportPreferencePage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Transport Preference</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage dealer preferences via CSV upload or the quick editor below. Uploading replaces the saved data.
+            Preferences are managed only via CSV download/upload. Uploading replaces the saved data.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -448,52 +304,6 @@ const TransportPreferencePage: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Quick manage dealers</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-600">Search dealer</label>
-              <Input
-                value={dealerQuery}
-                onChange={(event) => setDealerQuery(event.target.value)}
-                placeholder="Search dealer name"
-                className="w-64"
-              />
-            </div>
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600">Add dealer</label>
-                <Input
-                  value={newDealerName}
-                  onChange={(event) => setNewDealerName(event.target.value)}
-                  placeholder="Dealer name"
-                  list="dealer-options"
-                  className="w-56"
-                />
-                <datalist id="dealer-options">
-                  {dealers.map((dealer) => (
-                    <option key={dealer} value={dealer} />
-                  ))}
-                </datalist>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-600">Destination</label>
-                <Input
-                  value={newDealerDestination}
-                  onChange={(event) => setNewDealerDestination(event.target.value)}
-                  placeholder="Optional destination"
-                  className="w-56"
-                />
-              </div>
-              <Button onClick={handleAddDealer}>Add dealer</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base">Current preferences</CardTitle>
             <FileDown className="h-4 w-4 text-muted-foreground" />
@@ -501,176 +311,67 @@ const TransportPreferencePage: React.FC = () => {
         </CardHeader>
         <CardContent>
           {preferenceEntries.length ? (
-            filteredPreferenceEntries.length ? (
-              <div className="space-y-6">
-                {filteredPreferenceEntries.map(({ dealer, destination, preferences }) => (
-                  <Card key={dealer} className="border-slate-200 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base text-slate-900">{dealer}</CardTitle>
-                      <p className="text-xs text-muted-foreground">Preference vendors: {preferences.length}</p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Basic info</div>
-                        <div className="mt-2 text-sm font-medium text-slate-800">
-                          Destination: <span className="font-semibold">{destination || "-"}</span>
-                        </div>
+            <div className="space-y-6">
+              {preferenceEntries.map(({ dealer, destination, preferences }) => (
+                <Card key={dealer} className="border-slate-200 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base text-slate-900">{dealer}</CardTitle>
+                    <p className="text-xs text-muted-foreground">Preference vendors: {preferences.length}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Basic info</div>
+                      <div className="mt-2 text-sm font-medium text-slate-800">
+                        Destination: <span className="font-semibold">{destination || "-"}</span>
                       </div>
+                    </div>
 
-                      <div className="overflow-hidden rounded-lg border border-slate-200">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50">
-                              <TableHead className="w-20">Preference</TableHead>
-                              <TableHead className="w-56">Vendor</TableHead>
-                              <TableHead>Capacity</TableHead>
-                              <TableHead>Supplier rating</TableHead>
-                              <TableHead>Bank guarantee</TableHead>
-                              <TableHead className="w-24">Edit</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {preferences.map((pref, index) => {
-                              const vendorLabel =
-                                pref.vendorName || transportNameById.get(pref.vendorId || "") || "-";
-                              return (
-                                <TableRow key={`${dealer}-${pref.order}-${index}`}>
-                                  <TableCell className="text-sm font-semibold text-slate-600">
-                                    {pref.order ?? index + 1}
-                                  </TableCell>
-                                  <TableCell className="font-semibold text-slate-900">{vendorLabel}</TableCell>
-                                  <TableCell>
-                                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                                      {pref.truckNumber || "-"}
+                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="w-20">Preference</TableHead>
+                            <TableHead className="w-56">Vendor</TableHead>
+                            <TableHead>Capacity</TableHead>
+                            <TableHead>Supplier rating</TableHead>
+                            <TableHead>Bank guarantee</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {preferences.map((pref, index) => {
+                            const vendorLabel =
+                              pref.vendorName || transportNameById.get(pref.vendorId || "") || "-";
+                            return (
+                              <TableRow key={`${dealer}-${pref.order}-${index}`}>
+                                <TableCell className="text-sm font-semibold text-slate-600">
+                                  {pref.order ?? index + 1}
+                                </TableCell>
+                                <TableCell className="font-semibold text-slate-900">{vendorLabel}</TableCell>
+                                <TableCell>
+                                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                                    {pref.truckNumber || "-"}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{renderStars(pref.supplierRating)}</TableCell>
+                                <TableCell>
+                                  {isYes(pref.bankGuarantee) ? (
+                                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                                      Bank guarantee
                                     </span>
-                                  </TableCell>
-                                  <TableCell>{renderStars(pref.supplierRating)}</TableCell>
-                                  <TableCell>
-                                    {isYes(pref.bankGuarantee) ? (
-                                      <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-                                        Bank guarantee
-                                      </span>
-                                    ) : (
-                                      <span className="text-xs text-slate-400">-</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() =>
-                                        updateDealerForm(dealer, {
-                                          editingIndex: index,
-                                          order: String(pref.order ?? index + 1),
-                                          vendorName: vendorLabel === "-" ? "" : vendorLabel,
-                                          truckNumber: pref.truckNumber ?? "",
-                                          supplierRating: pref.supplierRating ?? "",
-                                          bankGuarantee: isYes(pref.bankGuarantee),
-                                        })
-                                      }
-                                    >
-                                      Edit
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-
-                      {(() => {
-                        const form = dealerForms[dealer] ?? defaultDealerForm;
-                        const isEditing = form.editingIndex != null;
-                        return (
-                          <div className="rounded-lg border border-slate-200 bg-white p-4">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              {isEditing ? "Edit vendor" : "Add vendor"}
-                            </div>
-                            <div className="mt-3 grid gap-3 md:grid-cols-5">
-                              <div className="space-y-2 md:col-span-2">
-                                <label className="text-xs font-semibold text-slate-600">Vendor name</label>
-                                <Input
-                                  value={form.vendorName}
-                                  onChange={(event) =>
-                                    updateDealerForm(dealer, { vendorName: event.target.value })
-                                  }
-                                  placeholder="Select or type vendor"
-                                  list={`vendor-options-${dealer}`}
-                                />
-                                <datalist id={`vendor-options-${dealer}`}>
-                                  {transportOptions.map((option) => (
-                                    <option key={option.id} value={option.name} />
-                                  ))}
-                                </datalist>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-600">Order</label>
-                                <Input
-                                  value={form.order}
-                                  onChange={(event) => updateDealerForm(dealer, { order: event.target.value })}
-                                  placeholder="1-8"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-600">Capacity</label>
-                                <Input
-                                  value={form.truckNumber}
-                                  onChange={(event) =>
-                                    updateDealerForm(dealer, { truckNumber: event.target.value })
-                                  }
-                                  placeholder="Truck count"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-600">Supplier rating</label>
-                                <Input
-                                  value={form.supplierRating}
-                                  onChange={(event) =>
-                                    updateDealerForm(dealer, { supplierRating: event.target.value })
-                                  }
-                                  placeholder="0-10"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-600">Bank guarantee</label>
-                                <select
-                                  value={form.bankGuarantee ? "yes" : "no"}
-                                  onChange={(event) =>
-                                    updateDealerForm(dealer, { bankGuarantee: event.target.value === "yes" })
-                                  }
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                >
-                                  <option value="no">No</option>
-                                  <option value="yes">Yes</option>
-                                </select>
-                              </div>
-                            </div>
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              <Button onClick={() => handleSaveVendor(dealer, preferences)}>
-                                {isEditing ? "Update vendor" : "Add vendor"}
-                              </Button>
-                              {isEditing ? (
-                                <Button
-                                  variant="outline"
-                                  onClick={() => resetDealerForm(dealer)}
-                                >
-                                  Cancel
-                                </Button>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                No dealers match the current search.
-              </div>
-            )
+                                  ) : (
+                                    <span className="text-xs text-slate-400">-</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           ) : (
             <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               No transport preferences uploaded yet.
