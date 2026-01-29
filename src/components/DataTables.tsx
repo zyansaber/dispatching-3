@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import {
   ProcessedReallocationEntry,
   TransportConfig,
   TransportPreferenceData,
-  TransportPreferenceItem,
 } from "@/types";
 import {
   AlertDialog,
@@ -741,54 +740,23 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   const getDealerName = (entry: ProcessedDispatchEntry) =>
     entry.reallocatedTo?.trim() || entry["Scheduled Dealer"]?.trim() || "";
 
-  const normalizePreferences = useCallback(
-    (raw: TransportPreferenceItem[]) =>
-      raw
-        .slice()
-        .map((pref) => {
-          const vendorName =
-            pref.vendorName ||
-            (pref.vendorId ? transportNameById[pref.vendorId] : "") ||
-            "";
-          return {
-            ...pref,
-            vendorName,
-          };
-        })
-        .filter((pref) => pref.vendorName),
-    [transportNameById],
-  );
-
   const getPreferenceList = (dealer: string) => {
     const raw = transportPreferences[dealer]?.preferences || [];
-    return normalizePreferences(raw).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return raw
+      .slice()
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((pref) => {
+        const vendorName =
+          pref.vendorName ||
+          (pref.vendorId ? transportNameById[pref.vendorId] : "") ||
+          "";
+        return {
+          ...pref,
+          vendorName,
+        };
+      })
+      .filter((pref) => pref.vendorName);
   };
-
-  const allVendorPreferences = useMemo(() => {
-    const collected: TransportPreferenceItem[] = [];
-    for (const entry of Object.values(transportPreferences || {})) {
-      if (entry?.preferences?.length) {
-        collected.push(...entry.preferences);
-      }
-    }
-    for (const option of transportOptions) {
-      collected.push({ order: 0, vendorName: option.name });
-    }
-
-    const unique = new Map<string, TransportPreferenceItem>();
-    for (const pref of normalizePreferences(collected)) {
-      if (!unique.has(pref.vendorName)) {
-        unique.set(pref.vendorName, pref);
-      }
-    }
-
-    return Array.from(unique.values())
-      .sort((a, b) => a.vendorName.localeCompare(b.vendorName))
-      .map((pref, index) => ({
-        ...pref,
-        order: index + 1,
-      }));
-  }, [normalizePreferences, transportOptions, transportPreferences]);
 
   const isYes = (value?: string | null) =>
     (value || "").trim().toLowerCase() === "yes";
@@ -976,16 +944,6 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   const statusCategory = getStatusCheckCategory(entry.Statuscheck);
                   const dealerName = getDealerName(entry);
                   const dealerPreferences = dealerName ? getPreferenceList(dealerName) : [];
-                  const hasDealerPreferences = dealerPreferences.length > 0;
-                  const vendorPreferences = hasDealerPreferences ? dealerPreferences : allVendorPreferences;
-                  const preferenceLabel = hasDealerPreferences ? "Dealer preferences" : "All vendors";
-                  const preferenceDescription = hasDealerPreferences
-                    ? dealerName
-                      ? `Preferred vendors for ${dealerName}.`
-                      : "Preferred vendors."
-                    : dealerName
-                      ? `No dealer preferences found for ${dealerName}. Showing all vendors.`
-                      : "No dealer preferences found. Showing all vendors.";
                   const selectedCompanyLabel = entry.TransportCompany?.trim() || "";
 
                   return (
@@ -1046,7 +1004,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                               </select>
                             ) : null}
 
-                            {vendorPreferences.length ? (
+                            {dealerPreferences.length ? (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <button
@@ -1055,7 +1013,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                   >
                                     <div className="flex flex-col gap-0.5">
                                       <span className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
-                                        {preferenceLabel}
+                                        Dealer preferences
                                       </span>
                                       <span className="text-sm font-semibold text-slate-800">
                                         {selectedCompanyLabel || "Select company"}
@@ -1066,18 +1024,18 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                 </AlertDialogTrigger>
                                 <AlertDialogContent className="max-w-2xl">
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>{preferenceLabel}</AlertDialogTitle>
+                                    <AlertDialogTitle>Dealer preferences</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      {preferenceDescription}
+                                      {dealerName ? `Preferred vendors for ${dealerName}.` : "Preferred vendors."}
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <div className="space-y-3">
-                                    {vendorPreferences.map((pref) => {
+                                    {dealerPreferences.map((pref) => {
                                       const isSelected = pref.vendorName === entry.TransportCompany;
                                       const bookedCount = bookedCountByVendor[pref.vendorName] || 0;
                                       return (
                                         <div
-                                          key={`${dealerName || "all"}-${pref.order}-${pref.vendorName}`}
+                                          key={`${dealerName}-${pref.order}-${pref.vendorName}`}
                                           className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 ${
                                             isSelected ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"
                                           }`}
@@ -1137,7 +1095,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                               </AlertDialog>
                             ) : (
                               <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                                No vendors available.
+                                No dealer preferences available.
                               </div>
                             )}
                           </div>
