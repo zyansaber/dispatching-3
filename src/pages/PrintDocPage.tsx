@@ -39,11 +39,17 @@ const toDateTimeLocal = (value: Date) => {
 };
 
 const toChassisKey = (value?: string | null) => value?.toString().trim() || "";
+const toDateTimeInput = (value?: string | null) => {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return toDateTimeLocal(parsed);
+};
 
 const PrintDocPage: React.FC = () => {
   const { dispatchProcessed } = useDashboardContext();
   const [generatedAt, setGeneratedAt] = useState(() => new Date());
-  const [collectionDateTime, setCollectionDateTime] = useState(() => toDateTimeLocal(new Date()));
+  const [collectionDateTime, setCollectionDateTime] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedChassis, setSelectedChassis] = useState<Set<string>>(new Set());
   const [titleImageError, setTitleImageError] = useState(false);
@@ -54,6 +60,7 @@ const PrintDocPage: React.FC = () => {
   const [driverVehicleReg, setDriverVehicleReg] = useState("");
   const previousTransportLabel = useRef("");
   const previousPoNumbers = useRef("");
+  const previousPickupTime = useRef("");
 
   const availableRows = useMemo(() => dispatchProcessed, [dispatchProcessed]);
 
@@ -114,6 +121,13 @@ const PrintDocPage: React.FC = () => {
   const transportCompanyLabel = transportCompaniesForSelection.length
     ? transportCompaniesForSelection.join(", ")
     : "________________________";
+  const pickupTimeLabel = useMemo(() => {
+    const entries = selectedRows
+      .map((row) => row.EstimatedPickupAt)
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+    const unique = Array.from(new Set(entries));
+    return unique.length === 1 ? toDateTimeInput(unique[0]) : "";
+  }, [selectedRows]);
 
   useEffect(() => {
     const previousLabel = previousTransportLabel.current;
@@ -130,6 +144,14 @@ const PrintDocPage: React.FC = () => {
     }
     previousPoNumbers.current = poNumbers;
   }, [poNumberInput, poNumbers]);
+
+  useEffect(() => {
+    const previousLabel = previousPickupTime.current;
+    if (!collectionDateTime || collectionDateTime === previousLabel) {
+      setCollectionDateTime(pickupTimeLabel);
+    }
+    previousPickupTime.current = pickupTimeLabel;
+  }, [collectionDateTime, pickupTimeLabel]);
 
   const renderRows = selectedRows.length
     ? selectedRows
@@ -318,6 +340,7 @@ const PrintDocPage: React.FC = () => {
                 <tr>
                   <th>Chassis Number</th>
                   <th>VIN Number</th>
+                  <th>Sales Order Number</th>
                   <th>Destination Dealership (SAP Data)</th>
                 </tr>
               </thead>
@@ -326,6 +349,7 @@ const PrintDocPage: React.FC = () => {
                   <tr key={row["Chassis No"] || `placeholder-${index}`}>
                     <td>{row["Chassis No"] || ""}</td>
                     <td>{row["Vin Number"] || (row as Record<string, any>)["VIN Number"] || ""}</td>
+                    <td>{row["SO Number"] || ""}</td>
                     <td>{row["SAP Data"] || ""}</td>
                   </tr>
                 ))}
@@ -457,8 +481,8 @@ const PrintDocPage: React.FC = () => {
 
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
-              <div className="font-semibold text-slate-900">Arrival Time:</div>
-              <div>{formatDateTime(collectionDateTime) || "____________________________"}</div>
+              <div className="font-semibold text-slate-900">Delivery Time:</div>
+              <div>____________________________</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Damage Noted:</div>
@@ -542,7 +566,7 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
               <div className="font-semibold text-slate-900">Delivery Time:</div>
-              <div>{formatDateTime(collectionDateTime) || "____________________________"}</div>
+              <div>____________________________</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Damage Noted:</div>
