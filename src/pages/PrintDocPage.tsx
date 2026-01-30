@@ -318,7 +318,6 @@ const PrintDocPage: React.FC = () => {
                 <tr>
                   <th>Chassis Number</th>
                   <th>VIN Number</th>
-                  <th>Sales Order Number</th>
                   <th>Destination Dealership (SAP Data)</th>
                 </tr>
               </thead>
@@ -327,7 +326,6 @@ const PrintDocPage: React.FC = () => {
                   <tr key={row["Chassis No"] || `placeholder-${index}`}>
                     <td>{row["Chassis No"] || ""}</td>
                     <td>{row["Vin Number"] || (row as Record<string, any>)["VIN Number"] || ""}</td>
-                    <td>{row["SO Number"] || ""}</td>
                     <td>{row["SAP Data"] || ""}</td>
                   </tr>
                 ))}
@@ -459,6 +457,10 @@ const PrintDocPage: React.FC = () => {
 
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
+              <div className="font-semibold text-slate-900">Arrival Time:</div>
+              <div>{formatDateTime(collectionDateTime) || "____________________________"}</div>
+            </div>
+            <div>
               <div className="font-semibold text-slate-900">Damage Noted:</div>
               <div>YES / NO</div>
             </div>
@@ -540,7 +542,7 @@ const PrintDocPage: React.FC = () => {
           <div className="mt-6 grid grid-cols-1 gap-4 text-sm text-slate-700 md:grid-cols-2">
             <div>
               <div className="font-semibold text-slate-900">Delivery Time:</div>
-              <div>____________________________</div>
+              <div>{formatDateTime(collectionDateTime) || "____________________________"}</div>
             </div>
             <div>
               <div className="font-semibold text-slate-900">Damage Noted:</div>
