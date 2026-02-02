@@ -5,6 +5,7 @@ import { useDashboardContext } from "./Index";
 const DispatchPage: React.FC = () => {
   const {
     dispatchProcessed,
+    deliveryToAssignments,
     stats,
     transportCompanies,
     transportPreferences,
@@ -43,6 +44,7 @@ const DispatchPage: React.FC = () => {
         activeFilter={activeFilter}
         transportCompanies={transportCompanies}
         transportPreferences={transportPreferences}
+        deliveryToAssignments={deliveryToAssignments}
         grRangeFilter={sidebarFilter?.kind === "grRange" ? sidebarFilter : null}
       />
     </div>
