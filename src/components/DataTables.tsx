@@ -30,6 +30,7 @@ import {
   reportError,
   patchDispatch,
 } from "@/lib/firebase";
+import { formatDateTime, formatElapsedTime } from "@/lib/time";
 import { toast } from "sonner";
 import type { SidebarFilter } from "@/pages/Index";
 
@@ -92,13 +93,14 @@ interface DispatchStatsProps {
   booked?: number;
   temporaryLeavingWithoutPGI?: number;
   invalidStock?: number;
-  onFilterChange: (filter: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock') => void;
-  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock';
+  serviceTicket?: number;
+  onFilterChange: (filter: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock' | 'serviceTicket') => void;
+  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock' | 'serviceTicket';
 }
 
 export const DispatchStats: React.FC<DispatchStatsProps> = ({
   wrongStatus, noReference, snowyStock, waitingForBooking, canBeDispatched, onHold, booked,
-  temporaryLeavingWithoutPGI, invalidStock, onFilterChange, activeFilter = "all",
+  temporaryLeavingWithoutPGI, invalidStock, serviceTicket, onFilterChange, activeFilter = "all",
 }) => {
   const topCards = [
     { label: "Waiting for booking", value: waitingForBooking, filter: "canBeDispatched" },
@@ -122,6 +124,15 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
             label: "Invalid stock (to be confirmed)",
             value: invalidStock,
             filter: "invalidStock",
+          } as const,
+        ]
+      : []),
+    ...(serviceTicket !== undefined
+      ? [
+          {
+            label: "Service ticket",
+            value: serviceTicket,
+            filter: "serviceTicket",
           } as const,
         ]
       : []),
@@ -216,7 +227,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 /* ====================== 主表 ====================== */
 interface DispatchTableProps {
   allData: ProcessedDispatchEntry[];
-  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock';
+  activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock' | 'serviceTicket';
   transportCompanies?: TransportConfig;
   transportPreferences?: TransportPreferenceData;
   deliveryToAssignments?: DeliveryToAssignmentsData;
@@ -267,7 +278,10 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             p.TemporaryLeavingWithoutPGIBy === base.TemporaryLeavingWithoutPGIBy) &&
           (p.InvalidStock === undefined || p.InvalidStock === base.InvalidStock) &&
           (p.InvalidStockAt === undefined || p.InvalidStockAt === base.InvalidStockAt) &&
-          (p.InvalidStockBy === undefined || p.InvalidStockBy === base.InvalidStockBy);
+          (p.InvalidStockBy === undefined || p.InvalidStockBy === base.InvalidStockBy) &&
+          (p.ServiceTicket === undefined || p.ServiceTicket === base.ServiceTicket) &&
+          (p.ServiceTicketAt === undefined || p.ServiceTicketAt === base.ServiceTicketAt) &&
+          (p.ServiceTicketBy === undefined || p.ServiceTicketBy === base.ServiceTicketBy);
         if (inSync) delete next[id];
       }
       return next;
@@ -330,12 +344,14 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       if (activeFilter === "onHold")    arr = arr.filter(e => e.OnHold === true);
       if (activeFilter === "temporaryLeaving") arr = arr.filter(e => e.TemporaryLeavingWithoutPGI === true);
       if (activeFilter === "invalidStock") arr = arr.filter(e => e.InvalidStock === true);
+      if (activeFilter === "serviceTicket") arr = arr.filter(e => e.ServiceTicket === true);
       if (activeFilter === "booked")    arr = arr.filter(e => {
         const poNo = e["Matched PO No"];
         return (
           !e.OnHold &&
           !e.TemporaryLeavingWithoutPGI &&
           !e.InvalidStock &&
+          !e.ServiceTicket &&
           (typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo))
         );
       });
@@ -345,6 +361,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             !e.OnHold &&
             !e.TemporaryLeavingWithoutPGI &&
             !e.InvalidStock &&
+            !e.ServiceTicket &&
             isSnowyStockEntry(e)
         );
       if (activeFilter === "canBeDispatched")
@@ -356,6 +373,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             !e.OnHold &&
             !e.TemporaryLeavingWithoutPGI &&
             !e.InvalidStock &&
+            !e.ServiceTicket &&
             !isSnowyStockEntry(e)
         );
     }
@@ -391,11 +409,12 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   }, [baseMerged, activeFilter, sortConfig, grRangeFilter, searchTerm]);
 
   const activeRows = filtered.filter(
-    (e) => !e.OnHold && !e.TemporaryLeavingWithoutPGI && !e.InvalidStock
+    (e) => !e.OnHold && !e.TemporaryLeavingWithoutPGI && !e.InvalidStock && !e.ServiceTicket
   );
   const onHoldRows = filtered.filter(e =>  e.OnHold);
   const temporaryLeavingRows = filtered.filter(e => e.TemporaryLeavingWithoutPGI);
   const invalidStockRows = filtered.filter(e => e.InvalidStock);
+  const serviceTicketRows = filtered.filter(e => e.ServiceTicket);
 
   const maxGRDays = Math.max(...baseMerged.map(e => e["GR to GI Days"] || 0), 1);
 
@@ -431,6 +450,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             InvalidStock: false,
             InvalidStockAt: null,
             InvalidStockBy: null,
+            ServiceTicket: false,
+            ServiceTicketAt: null,
+            ServiceTicketBy: null,
           }
         : {}),
     };
@@ -451,6 +473,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         delete prev.InvalidStock;
         delete prev.InvalidStockAt;
         delete prev.InvalidStockBy;
+        delete prev.ServiceTicket;
+        delete prev.ServiceTicketAt;
+        delete prev.ServiceTicketBy;
         return { ...m, [id]: prev };
       });
       setError(e => ({ ...e, [id]: err?.message || "Update failed" }));
@@ -487,6 +512,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             InvalidStock: false,
             InvalidStockAt: null,
             InvalidStockBy: null,
+            ServiceTicket: false,
+            ServiceTicketAt: null,
+            ServiceTicketBy: null,
           }
         : {}),
     };
@@ -506,6 +534,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           delete prev.InvalidStock;
           delete prev.InvalidStockAt;
           delete prev.InvalidStockBy;
+          delete prev.ServiceTicket;
+          delete prev.ServiceTicketAt;
+          delete prev.ServiceTicketBy;
           delete prev.OnHold;
           delete prev.OnHoldAt;
           delete prev.OnHoldBy;
@@ -532,6 +563,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             TemporaryLeavingWithoutPGI: false,
             TemporaryLeavingWithoutPGIAt: null,
             TemporaryLeavingWithoutPGIBy: null,
+            ServiceTicket: false,
+            ServiceTicketAt: null,
+            ServiceTicketBy: null,
           }
         : {}),
     };
@@ -547,6 +581,70 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         delete prev.InvalidStockAt;
         delete prev.InvalidStockBy;
         if (next) {
+          delete prev.OnHold;
+          delete prev.OnHoldAt;
+          delete prev.OnHoldBy;
+          delete prev.TemporaryLeavingWithoutPGI;
+          delete prev.TemporaryLeavingWithoutPGIAt;
+          delete prev.TemporaryLeavingWithoutPGIBy;
+          delete prev.ServiceTicket;
+          delete prev.ServiceTicketAt;
+          delete prev.ServiceTicketBy;
+        }
+        return { ...m, [id]: prev };
+      });
+      setError((e) => ({ ...e, [id]: err?.message || "Update failed" }));
+    } finally {
+      setSaving((s) => ({ ...s, [id]: false }));
+    }
+  };
+
+  const handleToggleServiceTicket = async (row: ProcessedDispatchEntry, next: boolean) => {
+    const id = getRowKey(row);
+    let comment = row.Comment ?? "";
+    if (next) {
+      const promptValue = window.prompt(
+        "Please enter a comment for service ticket (optional).",
+        comment
+      );
+      if (promptValue == null) return;
+      comment = promptValue.trim();
+    }
+    const patch: Partial<ProcessedDispatchEntry> = {
+      ServiceTicket: next,
+      ServiceTicketAt: next ? new Date().toISOString() : null,
+      ServiceTicketBy: next ? ("webapp" as const) : null,
+      ...(next ? { Comment: comment } : {}),
+      ...(next
+        ? {
+            OnHold: false,
+            OnHoldAt: null,
+            OnHoldBy: null,
+            TemporaryLeavingWithoutPGI: false,
+            TemporaryLeavingWithoutPGIAt: null,
+            TemporaryLeavingWithoutPGIBy: null,
+            InvalidStock: false,
+            InvalidStockAt: null,
+            InvalidStockBy: null,
+          }
+        : {}),
+    };
+    applyOptimistic(id, patch);
+    setSaving((s) => ({ ...s, [id]: true }));
+    setError((e) => ({ ...e, [id]: undefined }));
+    try {
+      await patchDispatch(id, patch);
+    } catch (err: any) {
+      setOptimistic((m) => {
+        const prev = { ...(m[id] || {}) };
+        delete prev.ServiceTicket;
+        delete prev.ServiceTicketAt;
+        delete prev.ServiceTicketBy;
+        if (next) delete prev.Comment;
+        if (next) {
+          delete prev.InvalidStock;
+          delete prev.InvalidStockAt;
+          delete prev.InvalidStockBy;
           delete prev.OnHold;
           delete prev.OnHoldAt;
           delete prev.OnHoldBy;
@@ -731,6 +829,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     "On Hold": e.OnHold ? "Yes" : "No",
     "Temporary leaving": e.TemporaryLeavingWithoutPGI ? "Yes" : "No",
     "Invalid stock (to be confirmed)": e.InvalidStock ? "Yes" : "No",
+    "Service ticket": e.ServiceTicket ? "Yes" : "No",
+    "Service ticket at": e.ServiceTicketAt ?? "",
     Status: getStatusCheckLabel(e.Statuscheck),
     Dealer: e.DealerCheck ?? "",
     Reallocation: e.reallocatedTo ?? "",
@@ -821,6 +921,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         !row.OnHold &&
         !row.TemporaryLeavingWithoutPGI &&
         !row.InvalidStock &&
+        !row.ServiceTicket &&
         (typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo));
       if (!hasBooked) continue;
       counts[company] = (counts[company] || 0) + 1;
@@ -867,12 +968,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       const XLSX = await loadXLSX();
       const active = activeRows.map(toPlainRow);
       const onhold = onHoldRows.map(toPlainRow);
+      const serviceTicket = serviceTicketRows.map(toPlainRow);
 
       const wb = XLSX.utils.book_new();
       const ws1 = XLSX.utils.json_to_sheet(active);
       const ws2 = XLSX.utils.json_to_sheet(onhold);
+      const ws3 = XLSX.utils.json_to_sheet(serviceTicket);
       XLSX.utils.book_append_sheet(wb, ws1, "Active");
       XLSX.utils.book_append_sheet(wb, ws2, "On Hold");
+      XLSX.utils.book_append_sheet(wb, ws3, "Service Ticket");
 
       const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx" });
       downloadBlob(new Blob([wbout], { type: "application/octet-stream" }), `dispatch_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -888,8 +992,10 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       };
       const active = activeRows.map(toPlainRow);
       const onhold = onHoldRows.map(toPlainRow);
+      const serviceTicket = serviceTicketRows.map(toPlainRow);
       downloadBlob(new Blob([rowsToCsv(active)], { type: "text/csv;charset=utf-8" }), `dispatch_active_${new Date().toISOString().slice(0,10)}.csv`);
       downloadBlob(new Blob([rowsToCsv(onhold)], { type: "text/csv;charset=utf-8" }), `dispatch_onhold_${new Date().toISOString().slice(0,10)}.csv`);
+      downloadBlob(new Blob([rowsToCsv(serviceTicket)], { type: "text/csv;charset=utf-8" }), `dispatch_service_ticket_${new Date().toISOString().slice(0,10)}.csv`);
       toast.message("Excel 依赖不可用，已回落为 CSV 导出");
     }
   };
@@ -1335,6 +1441,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             >
                               Invalid Stock
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full min-w-[140px] border-indigo-300 text-sm text-indigo-700 shadow-sm hover:bg-indigo-50"
+                              disabled={saving[rowKey]}
+                              onClick={() => handleToggleServiceTicket(entry, true)}
+                            >
+                              Service Ticket
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1502,6 +1617,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           commentDraft={commentDraft}
           setCommentDraft={setCommentDraft}
           handlers={{ handleToggleInvalidStock, handleSaveComment }}
+        />
+
+        <ServiceTicketBoard
+          rows={serviceTicketRows}
+          saving={saving}
+          error={error}
+          commentDraft={commentDraft}
+          setCommentDraft={setCommentDraft}
+          handlers={{ handleToggleServiceTicket, handleSaveComment }}
         />
       </div>
     </div>
@@ -1819,6 +1943,104 @@ const InvalidStockBoard: React.FC<{
                         onClick={() => handlers.handleToggleInvalidStock(row, false)}
                       >
                         Mark Ready
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
+  );
+};
+
+/* ====================== Service Ticket 卡片 ====================== */
+const ServiceTicketBoard: React.FC<{
+  rows: ProcessedDispatchEntry[];
+  saving: Record<string, boolean>;
+  error: Record<string, string | undefined>;
+  commentDraft: Record<string, string>;
+  setCommentDraft: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  handlers: {
+    handleToggleServiceTicket: (row: ProcessedDispatchEntry, next: boolean) => Promise<void>;
+    handleSaveComment: (row: ProcessedDispatchEntry) => Promise<void>;
+  };
+}> = ({ rows, saving, error, commentDraft, setCommentDraft, handlers }) => {
+  if (!rows.length) return null;
+  return (
+    <section className="w-full space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-1.5 h-5 bg-indigo-500 rounded" />
+        <h3 className="text-base font-semibold text-slate-900">Service ticket</h3>
+        <div className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">
+          {rows.length} Items
+        </div>
+      </div>
+      <div className="w-full overflow-hidden rounded-lg border border-slate-200">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-[140px]">Chassis No</TableHead>
+              <TableHead className="min-w-[130px]">SO Number</TableHead>
+              <TableHead className="min-w-[150px]">VIN Number</TableHead>
+              <TableHead className="min-w-[160px]">Customer</TableHead>
+              <TableHead className="min-w-[120px]">Model</TableHead>
+              <TableHead className="min-w-[200px]">Service ticket at</TableHead>
+              <TableHead className="min-w-[180px]">Service duration</TableHead>
+              <TableHead className="min-w-[260px]">Comment</TableHead>
+              <TableHead className="min-w-[180px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, idx) => {
+              const rowKey = row.dispatchKey ?? row["Chassis No"] ?? "";
+              const chassisNo = row["Chassis No"] || rowKey;
+              const commentValue = commentDraft[rowKey] ?? (row.Comment ?? "");
+              const hasComment = commentValue.trim().length > 0;
+              return (
+                <TableRow key={rowKey} className={idx % 2 ? "bg-white" : "bg-slate-50/50"}>
+                  <TableCell className={`${CELL} font-medium`}>{chassisNo}</TableCell>
+                  <TableCell className={CELL}>{row["SO Number"] || "-"}</TableCell>
+                  <TableCell className={CELL}>{resolveVinNumber(row) || "-"}</TableCell>
+                  <TableCell className={CELL}>{row.Customer || "-"}</TableCell>
+                  <TableCell className={CELL}>{row.Model || "-"}</TableCell>
+                  <TableCell className={CELL}>{formatDateTime(row.ServiceTicketAt)}</TableCell>
+                  <TableCell className={CELL}>{formatElapsedTime(row.ServiceTicketAt)}</TableCell>
+                  <TableCell className="min-w-[260px]">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        className={`w-full ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                        placeholder="Add a comment"
+                        value={commentValue}
+                        onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === "Enter") handlers.handleSaveComment(row); }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className={SAVE_BUTTON_CLASS}
+                        disabled={saving[rowKey]}
+                        onClick={() => handlers.handleSaveComment(row)}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                    {error[rowKey] && <div className="text-xs text-red-600 mt-1">{error[rowKey]}</div>}
+                  </TableCell>
+                  <TableCell className="min-w-[180px]">
+                    <div className="flex flex-col gap-2">
+                      <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 w-fit">
+                        Service ticket
+                      </span>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 text-white"
+                        disabled={saving[rowKey]}
+                        onClick={() => handlers.handleToggleServiceTicket(row, false)}
+                      >
+                        Service Get Ready
                       </Button>
                     </div>
                   </TableCell>

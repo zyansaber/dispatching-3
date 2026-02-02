@@ -12,7 +12,7 @@ const DispatchPage: React.FC = () => {
     sidebarFilter,
   } = useDashboardContext();
   const [activeFilter, setActiveFilter] = useState<
-    "all" | "wrongStatus" | "noReference" | "snowy" | "canBeDispatched" | "onHold" | "booked" | "temporaryLeaving" | "invalidStock"
+    "all" | "wrongStatus" | "noReference" | "snowy" | "canBeDispatched" | "onHold" | "booked" | "temporaryLeaving" | "invalidStock" | "serviceTicket"
   >(
     "all"
   );
@@ -35,6 +35,7 @@ const DispatchPage: React.FC = () => {
         booked={stats.booked}
         temporaryLeavingWithoutPGI={stats.temporaryLeavingWithoutPGI}
         invalidStock={stats.invalidStock}
+        serviceTicket={stats.serviceTicket}
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
       />

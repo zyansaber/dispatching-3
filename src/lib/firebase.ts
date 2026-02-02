@@ -523,8 +523,9 @@ export const getDispatchStats = (
   const onHold = entries.filter((e) => e.OnHold === true).length;
   const temporaryLeavingWithoutPGI = entries.filter((e) => e.TemporaryLeavingWithoutPGI === true).length;
   const invalidStock = entries.filter((e) => e.InvalidStock === true).length;
+  const serviceTicket = entries.filter((e) => e.ServiceTicket === true).length;
   const activeEntries = entries.filter(
-    (e) => !e.OnHold && !e.TemporaryLeavingWithoutPGI && !e.InvalidStock
+    (e) => !e.OnHold && !e.TemporaryLeavingWithoutPGI && !e.InvalidStock && !e.ServiceTicket
   );
   const wrongStatus = activeEntries.filter(
     (e) => getStatusCheckCategory(e.Statuscheck) === "wrongStatus"
@@ -575,6 +576,7 @@ export const getDispatchStats = (
       !e.OnHold &&
       !e.TemporaryLeavingWithoutPGI &&
       !e.InvalidStock &&
+      !e.ServiceTicket &&
       !isSnowyStock(e, chassisToReallocatedTo)
   ).length;
 
@@ -589,6 +591,7 @@ export const getDispatchStats = (
     onHold,
     temporaryLeavingWithoutPGI,
     invalidStock,
+    serviceTicket,
     booked,
   };
 };
@@ -608,6 +611,7 @@ export const filterDispatchData = (
       (e) => getStatusCheckCategory(e.Statuscheck) === "noReference"
     );
   if (filter === "onHold") return data.filter((e) => e.OnHold === true);
+  if (filter === "serviceTicket") return data.filter((e) => e.ServiceTicket === true);
 
   const chassisToReallocatedTo = new Map<string, string>();
   Object.entries(reallocationData).forEach(([chassisNumber, entryObj]) => {
@@ -634,6 +638,7 @@ export const filterDispatchData = (
         !e.OnHold &&
         !e.InvalidStock &&
         !e.TemporaryLeavingWithoutPGI &&
+        !e.ServiceTicket &&
         !isSnowyStock(e, chassisToReallocatedTo)
     );
   }

@@ -158,6 +158,7 @@ const IndexPage: React.FC = () => {
           !entry.OnHold &&
           !entry.TemporaryLeavingWithoutPGI &&
           !entry.InvalidStock &&
+          !entry.ServiceTicket &&
           !(entry.reallocatedTo === "Snowy Stock" || entry["Scheduled Dealer"] === "Snowy Stock")
       ),
     [dispatchProcessed]
