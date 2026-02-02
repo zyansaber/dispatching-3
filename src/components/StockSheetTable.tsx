@@ -165,8 +165,6 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
           backgroundColor: value.backgroundColor ?? "",
           transportCompany: dispatchInfo?.TransportCompany || "",
           pickupAt: dispatchInfo?.EstimatedPickupAt || "",
-          dashboardComment: dispatchInfo?.Comment || "",
-          grToGiDays: dispatchInfo?.["GR to GI Days"] ?? "",
         };
       })
       .sort((a, b) => a.chassisNo.localeCompare(b.chassisNo, undefined, { sensitivity: "base" }));
@@ -308,8 +306,6 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
       "Customer Name",
       "Transport Company",
       "Ready for Transport",
-      "Dashboard Comment",
-      "GR to GI Days",
       "Update",
       "Year / Notes",
       "Dispatched",
@@ -323,8 +319,6 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
       row.customer,
       row.transportCompany,
       formatPickupTime(row.pickupAt),
-      row.dashboardComment,
-      row.grToGiDays,
       row.update,
       row.yearNotes,
       row.dispatched ? "Yes" : "No",
@@ -600,12 +594,6 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
               <TableHead className="min-w-[170px] h-10 px-3 py-2 border-l border-slate-200/70">
                 Ready for Transport
               </TableHead>
-              <TableHead className="min-w-[180px] h-10 px-3 py-2 border-l border-slate-200/70">
-                Dashboard Comment
-              </TableHead>
-              <TableHead className="min-w-[120px] h-10 px-3 py-2 border-l border-slate-200/70">
-                GR to GI Days
-              </TableHead>
               <TableHead className="min-w-[160px] h-10 px-3 py-2 border-l border-slate-200/70">
                 Update
               </TableHead>
@@ -620,7 +608,7 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
           <TableBody>
             {visibleRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={15} className="text-center text-sm text-slate-500 py-6">
+                <TableCell colSpan={13} className="text-center text-sm text-slate-500 py-6">
                   {hideDispatched ? "No pending records" : "No stock sheet records yet"}
                 </TableCell>
               </TableRow>
@@ -645,13 +633,11 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
             const reallocatedDealerValue = isEditing
               ? draft.reallocatedDealer ?? row.reallocatedDealer
               : row.reallocatedDealer;
-            const customerValue = isEditing
-              ? draft.customerName ?? row.customer
-              : row.customer;
+              const customerValue = isEditing
+                ? draft.customerName ?? row.customer
+                : row.customer;
             const transportCompanyValue = row.transportCompany;
             const pickupDisplay = formatPickupTime(row.pickupAt);
-            const dashboardCommentValue = row.dashboardComment;
-            const grToGiDaysValue = row.grToGiDays;
               const resolvedBackgroundColor = row.backgroundColor || undefined;
               const colorPickerValue =
                 row.backgroundColor || (row.dispatched ? "#ecfdf3" : "#ffffff");
@@ -795,12 +781,6 @@ const StockSheetTable: React.FC<StockSheetTableProps> = ({
                   </TableCell>
                   <TableCell className="align-top text-slate-700 px-3 py-2 border-l border-slate-200/70">
                     {pickupDisplay || "-"}
-                  </TableCell>
-                  <TableCell className="align-top text-slate-700 px-3 py-2 border-l border-slate-200/70">
-                    {dashboardCommentValue || "-"}
-                  </TableCell>
-                  <TableCell className="align-top text-slate-700 px-3 py-2 border-l border-slate-200/70">
-                    {grToGiDaysValue === "" ? "-" : grToGiDaysValue}
                   </TableCell>
                   <TableCell className="align-top px-3 py-2 border-l border-slate-200/70">
                     {isEditing ? (
