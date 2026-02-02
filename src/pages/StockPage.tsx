@@ -152,6 +152,8 @@ const StockPage: React.FC = () => {
       "Reallocation",
       "Transport Company",
       "Transport Time",
+      "Dashboard Comment",
+      "GR to GI Days",
       "PO No",
       "Customer",
       "Status",
@@ -166,6 +168,8 @@ const StockPage: React.FC = () => {
         entry.reallocatedTo || "",
         entry.TransportCompany || "",
         formatPickup(entry.EstimatedPickupAt),
+        entry.Comment || "",
+        entry["GR to GI Days"] ?? "",
         entry["Matched PO No"] || "",
         entry.Customer || "",
         statusMeta.label,
@@ -253,6 +257,8 @@ const StockPage: React.FC = () => {
                   <TableHead>Reallocation</TableHead>
                   <TableHead>Transport Company</TableHead>
                   <TableHead>Transport Time</TableHead>
+                  <TableHead>Dashboard Comment</TableHead>
+                  <TableHead>GR to GI Days</TableHead>
                   <TableHead>PO No</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Status</TableHead>
@@ -261,6 +267,7 @@ const StockPage: React.FC = () => {
               <TableBody>
                 {filteredEntries.map((entry) => {
                   const statusMeta = getStatusMeta(entry);
+                  const grToGiDays = entry["GR to GI Days"];
                   return (
                     <TableRow key={entry["Chassis No"]}>
                       <TableCell className="font-medium">{entry["Chassis No"] || "-"}</TableCell>
@@ -271,6 +278,8 @@ const StockPage: React.FC = () => {
                       <TableCell>{entry.reallocatedTo || "-"}</TableCell>
                       <TableCell>{entry.TransportCompany || "-"}</TableCell>
                       <TableCell>{formatPickup(entry.EstimatedPickupAt)}</TableCell>
+                      <TableCell>{entry.Comment || "-"}</TableCell>
+                      <TableCell>{grToGiDays ?? "-"}</TableCell>
                       <TableCell>{entry["Matched PO No"] || "-"}</TableCell>
                       <TableCell>{entry.Customer || "-"}</TableCell>
                       <TableCell>
@@ -283,7 +292,7 @@ const StockPage: React.FC = () => {
                 })}
                 {!filteredEntries.length && (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center text-sm text-muted-foreground">
                       No vehicles match the current filter.
                     </TableCell>
                   </TableRow>
