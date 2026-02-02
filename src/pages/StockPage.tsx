@@ -30,6 +30,7 @@ const StockPage: React.FC = () => {
       ["On Hold", 3],
       ["Temporary leaving", 4],
       ["Invalid stock (to be confirmed)", 5],
+      ["Service ticket", 6],
     ]);
 
     const getStatusLabel = (entry: ProcessedDispatchEntry) => {
@@ -40,6 +41,7 @@ const StockPage: React.FC = () => {
       if (entry.OnHold) return "On Hold";
       if (entry.TemporaryLeavingWithoutPGI) return "Temporary leaving";
       if (entry.InvalidStock) return "Invalid stock (to be confirmed)";
+      if (entry.ServiceTicket) return "Service ticket";
       if (isSnowyStock) return "Snowy stock";
       if (hasMatchedPO(entry)) return "Booked";
       return "Waiting for booking";
@@ -105,6 +107,13 @@ const StockPage: React.FC = () => {
       return {
         label: "Invalid stock (to be confirmed)",
         badgeClass: "border-yellow-300 bg-yellow-50 text-yellow-700",
+      };
+    }
+
+    if (entry.ServiceTicket) {
+      return {
+        label: "Service ticket",
+        badgeClass: "border-indigo-300 bg-indigo-50 text-indigo-700",
       };
     }
 
