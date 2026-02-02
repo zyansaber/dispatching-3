@@ -10,6 +10,7 @@ import {
   TransportConfig,
   TransportPreferenceData,
   TransportPreferenceItem,
+  DeliveryToAssignmentsData,
 } from "@/types";
 import {
   AlertDialog,
@@ -218,6 +219,7 @@ interface DispatchTableProps {
   activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock';
   transportCompanies?: TransportConfig;
   transportPreferences?: TransportPreferenceData;
+  deliveryToAssignments?: DeliveryToAssignmentsData;
   grRangeFilter?: SidebarFilter | null;
 }
 
@@ -226,6 +228,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   activeFilter = "all",
   transportCompanies = {},
   transportPreferences = {},
+  deliveryToAssignments = {},
   grRangeFilter = null,
 }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc'; } | null>(null);
@@ -278,6 +281,19 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   };
 
   const getRowKey = (row: ProcessedDispatchEntry) => row.dispatchKey ?? row["Chassis No"] ?? "";
+
+  const deliveryToLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    Object.entries(deliveryToAssignments || {}).forEach(([key, value]) => {
+      const chassis = (value?.chassis || key || "").toLowerCase().trim();
+      if (!chassis) return;
+      const deliveryTo = (value?.deliveryTo || "").trim();
+      if (deliveryTo) {
+        map.set(chassis, deliveryTo);
+      }
+    });
+    return map;
+  }, [deliveryToAssignments]);
 
   // 合并乐观层
   const baseMerged = useMemo(() => {
@@ -1039,7 +1055,25 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry.Customer || ""}>{entry.Customer || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry.Model || ""}>{entry.Model || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["SAP Data"] || ""}>{entry["SAP Data"] || "-"}</TableCell>
-                        <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Scheduled Dealer"] || ""}>{entry["Scheduled Dealer"] || "-"}</TableCell>
+                        <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Scheduled Dealer"] || ""}>
+                          {(() => {
+                            const chassisKey = (chassisNo || "").toLowerCase().trim();
+                            const deliveryTo = deliveryToLookup.get(chassisKey) || "";
+                            const scheduledDealer = entry["Scheduled Dealer"] || "";
+                            const displayDealer = scheduledDealer || "-";
+                            if (!deliveryTo) {
+                              return displayDealer;
+                            }
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-amber-800">
+                                <span>{displayDealer}</span>
+                                <span className="text-xs font-semibold tracking-wide">
+                                  ({deliveryTo})
+                                </span>
+                              </span>
+                            );
+                          })()}
+                        </TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Matched PO No"] || ""}>{entry["Matched PO No"] || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`}>
                           <div className="flex flex-col gap-2">

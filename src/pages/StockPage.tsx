@@ -7,7 +7,7 @@ import { ProcessedDispatchEntry } from "@/types";
 import { useDashboardContext } from "./Index";
 
 const StockPage: React.FC = () => {
-  const { dispatchProcessed } = useDashboardContext();
+  const { dispatchProcessed, deliveryToAssignments } = useDashboardContext();
   const [activeFilter, setActiveFilter] = useState<"all" | "booked" | "transportNoPO">("all");
 
   const hasMatchedPO = useCallback((entry: ProcessedDispatchEntry) => {
@@ -134,6 +134,19 @@ const StockPage: React.FC = () => {
     if (Number.isNaN(date.getTime())) return "-";
     return date.toLocaleString();
   };
+
+  const deliveryToLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    Object.entries(deliveryToAssignments || {}).forEach(([key, value]) => {
+      const chassis = (value?.chassis || key || "").toLowerCase().trim();
+      if (!chassis) return;
+      const deliveryTo = (value?.deliveryTo || "").trim();
+      if (deliveryTo) {
+        map.set(chassis, deliveryTo);
+      }
+    });
+    return map;
+  }, [deliveryToAssignments]);
 
   const toCsvCell = (value?: string | number | boolean | null) => {
     if (value == null) return "";
@@ -274,7 +287,25 @@ const StockPage: React.FC = () => {
                       <TableCell>{entry["SO Number"] || "-"}</TableCell>
                       <TableCell>{entry["Vin Number"] || (entry as Record<string, any>)["VIN Number"] || "-"}</TableCell>
                       <TableCell>{entry.Model || "-"}</TableCell>
-                      <TableCell>{entry["Scheduled Dealer"] || "-"}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const chassisKey = (entry["Chassis No"] || "").toLowerCase().trim();
+                        const deliveryTo = deliveryToLookup.get(chassisKey) || "";
+                        const scheduledDealer = entry["Scheduled Dealer"] || "";
+                        const displayDealer = scheduledDealer || "-";
+                        if (!deliveryTo) {
+                          return scheduledDealer || "-";
+                        }
+                        return (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-amber-800">
+                            <span>{displayDealer}</span>
+                            <span className="text-xs font-semibold tracking-wide">
+                              ({deliveryTo})
+                            </span>
+                          </span>
+                        );
+                      })()}
+                    </TableCell>
                       <TableCell>{entry.reallocatedTo || "-"}</TableCell>
                       <TableCell>{entry.TransportCompany || "-"}</TableCell>
                       <TableCell>{formatPickup(entry.EstimatedPickupAt)}</TableCell>
