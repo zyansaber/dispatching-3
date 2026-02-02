@@ -13,7 +13,7 @@ import {
   Package,
   PauseCircle,
   Printer,
-  Repeat,
+  Ticket,
   ShieldCheck,
   FileWarning,
   FileText,
@@ -36,7 +36,7 @@ const navItems: WorkspaceNavItem[] = [
   { to: "/transport-damage", label: "Transport Damage", icon: FileWarning, end: true },
   { to: "/transport-preference", label: "Transport Preference", icon: SlidersHorizontal, end: true },
   { to: "/pgi-history", label: "PGI History", icon: History, end: true },
-  { to: "/reallocation", label: "Reallocation", icon: Repeat, end: true },
+  { to: "/service-ticket", label: "Service Ticket", icon: Ticket, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
   { to: "/workflow", label: "Workflow Guide", icon: FileText, end: true },
 ];

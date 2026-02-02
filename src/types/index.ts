@@ -50,6 +50,11 @@ export interface DispatchEntry {
   InvalidStockAt?: string | null;
   InvalidStockBy?: string | null;
 
+  /** ✅ 新增：Service ticket 状态 */
+  ServiceTicket?: boolean;
+  ServiceTicketAt?: string | null;
+  ServiceTicketBy?: string | null;
+
   /** ✅ 新增：可编辑备注（后加字段：可缺省） */
   Comment?: string | null;
 

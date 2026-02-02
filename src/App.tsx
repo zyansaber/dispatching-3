@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 import DispatchPage from './pages/DispatchPage';
 import ReallocationPage from './pages/ReallocationPage';
+import ServiceTicketPage from './pages/ServiceTicketPage';
 import StockPage from './pages/StockPage';
 import AdminPage from './pages/AdminPage';
 import PrintDocPage from './pages/PrintDocPage';
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="transport-preference" element={<TransportPreferencePage />} />
           <Route path="pgi-history" element={<PGIHistoryPage />} />
           <Route path="reallocation" element={<ReallocationPage />} />
+          <Route path="service-ticket" element={<ServiceTicketPage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
