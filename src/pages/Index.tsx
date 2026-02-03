@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import {
   fetchDispatchData,
   fetchDispatchingNoteData,
-  fetchDeliveryToAssignments,
   fetchReallocationData,
   fetchScheduleData,
   processDispatchData,
@@ -13,7 +12,6 @@ import {
   filterDispatchData,
   subscribeDispatch,
   subscribeDispatchingNote,
-  subscribeDeliveryToAssignments,
   subscribeReallocation,
   fetchTransportCompanies,
   subscribeTransportCompanies,
@@ -36,7 +34,6 @@ import {
   TransportCompany,
   TransportConfig,
   TransportPreferenceData,
-  DeliveryToAssignmentsData,
 } from "@/types";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,7 +48,6 @@ interface DashboardContextValue {
   reallocRaw: ReallocationData;
   schedule: ScheduleData;
   dispatchingNote: DispatchingNoteData;
-  deliveryToAssignments: DeliveryToAssignmentsData;
   dispatchProcessed: ProcessedDispatchEntry[];
   reallocProcessed: ProcessedReallocationEntry[];
   stats: ReturnType<typeof getDispatchStats>;
@@ -88,8 +84,6 @@ const IndexPage: React.FC = () => {
   const [reallocRaw, setReallocRaw] = useState<ReallocationData>({});
   const [schedule, setSchedule] = useState<ScheduleData>([]);
   const [dispatchingNote, setDispatchingNote] = useState<DispatchingNoteData>({});
-  const [deliveryToAssignments, setDeliveryToAssignments] =
-    useState<DeliveryToAssignmentsData>({});
 
   const [dispatchProcessed, setDispatchProcessed] = useState<ProcessedDispatchEntry[]>([]);
   const [reallocProcessed, setReallocProcessed] = useState<ProcessedReallocationEntry[]>([]);
@@ -194,12 +188,11 @@ const IndexPage: React.FC = () => {
   const handleRefreshData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [d, r, s, n, deliveryTo, t, p] = await Promise.all([
+      const [d, r, s, n, t, p] = await Promise.all([
         fetchDispatchData(),
         fetchReallocationData(),
         fetchScheduleData(),
         fetchDispatchingNoteData(),
-        fetchDeliveryToAssignments(),
         fetchTransportCompanies(),
         fetchTransportPreferences(),
       ]);
@@ -207,7 +200,6 @@ const IndexPage: React.FC = () => {
       setReallocRaw(r || {});
       setSchedule(s || []);
       setDispatchingNote(n || {});
-      setDeliveryToAssignments(deliveryTo || {});
       setTransportCompanies(t || {});
       setTransportPreferences(p || {});
     } finally {
@@ -219,7 +211,6 @@ const IndexPage: React.FC = () => {
     let unsubDispatch: (() => void) | null = null;
     let unsubRealloc: (() => void) | null = null;
     let unsubNote: (() => void) | null = null;
-    let unsubDeliveryToAssignments: (() => void) | null = null;
     let unsubTransport: (() => void) | null = null;
     let unsubTransportPreferences: (() => void) | null = null;
 
@@ -234,9 +225,6 @@ const IndexPage: React.FC = () => {
     unsubDispatch = subscribeDispatch((d) => setDispatchRaw(d || {}));
     unsubRealloc = subscribeReallocation((r) => setReallocRaw(r || {}));
     unsubNote = subscribeDispatchingNote((n) => setDispatchingNote(n || {}));
-    unsubDeliveryToAssignments = subscribeDeliveryToAssignments((deliveryTo) =>
-      setDeliveryToAssignments(deliveryTo || {})
-    );
     unsubTransport = subscribeTransportCompanies((t) => setTransportCompanies(t || {}));
     unsubTransportPreferences = subscribeTransportPreferences((p) =>
       setTransportPreferences(p || {})
@@ -246,7 +234,6 @@ const IndexPage: React.FC = () => {
       unsubDispatch && unsubDispatch();
       unsubRealloc && unsubRealloc();
       unsubNote && unsubNote();
-      unsubDeliveryToAssignments && unsubDeliveryToAssignments();
       unsubTransport && unsubTransport();
       unsubTransportPreferences && unsubTransportPreferences();
     };
@@ -330,7 +317,6 @@ const IndexPage: React.FC = () => {
     reallocRaw,
     schedule,
     dispatchingNote,
-    deliveryToAssignments,
     dispatchProcessed,
     reallocProcessed,
     stats,
