@@ -117,19 +117,6 @@ export type ScheduleData = ScheduleEntry[];
 export type DispatchData = Record<string, DispatchEntry>;
 
 /** ----------------------------
- *  Delivery To Assignments（/deliveryToAssignments）
- * ----------------------------- */
-
-export interface DeliveryToAssignmentEntry {
-  chassis?: string | null;
-  deliveryTo?: string | null;
-  sourceDealerSlug?: string | null;
-  updatedAt?: string | null;
-}
-
-export type DeliveryToAssignmentsData = Record<string, DeliveryToAssignmentEntry>;
-
-/** ----------------------------
  *  Dispatching Note（/dispatchingnote）类型
  * ----------------------------- */
 
