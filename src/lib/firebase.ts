@@ -26,6 +26,7 @@ import {
   ProcessedDispatchEntry,
   DispatchingNoteData,
   DispatchingNoteEntry,
+  DeliveryToAssignments,
   TransportConfig,
   TransportCompany,
   TransportPreferenceData,
@@ -170,6 +171,16 @@ export const fetchDispatchingNoteData = async (): Promise<DispatchingNoteData> =
   }
 };
 
+export const fetchDeliveryToAssignments = async (): Promise<DeliveryToAssignments> => {
+  try {
+    const snapshot = await get(ref(db, "deliveryToAssignments"));
+    return snapshot.val() || {};
+  } catch (error) {
+    console.error("Error fetching delivery to assignments:", error);
+    return {};
+  }
+};
+
 export const fetchTransportCompanies = async (): Promise<TransportConfig> => {
   try {
     const snapshot = await get(ref(db, "transportCompanies"));
@@ -221,6 +232,16 @@ export function subscribeDispatchingNote(
   const r = ref(db, "dispatchingnote");
   const cb = onValue(r, (snap) =>
     onChange((snap.val() || {}) as DispatchingNoteData)
+  );
+  return () => off(r, "value", cb);
+}
+
+export function subscribeDeliveryToAssignments(
+  onChange: (data: DeliveryToAssignments) => void
+) {
+  const r = ref(db, "deliveryToAssignments");
+  const cb = onValue(r, (snap) =>
+    onChange((snap.val() || {}) as DeliveryToAssignments)
   );
   return () => off(r, "value", cb);
 }
