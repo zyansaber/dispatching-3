@@ -7,7 +7,7 @@ import { ProcessedDispatchEntry } from "@/types";
 import { useDashboardContext } from "./Index";
 
 const StockPage: React.FC = () => {
-  const { dispatchProcessed } = useDashboardContext();
+  const { dispatchProcessed, deliveryToAssignments } = useDashboardContext();
   const [activeFilter, setActiveFilter] = useState<"all" | "booked" | "transportNoPO">("all");
 
   const hasMatchedPO = useCallback((entry: ProcessedDispatchEntry) => {
@@ -56,6 +56,18 @@ const StockPage: React.FC = () => {
       return (a["Chassis No"] || "").localeCompare(b["Chassis No"] || "");
     });
   }, [dispatchProcessed, hasMatchedPO]);
+
+  const deliveryToLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    Object.entries(deliveryToAssignments || {}).forEach(([key, value]) => {
+      const chassis = (value?.chassis || key || "").toLowerCase().trim();
+      const deliveryTo = value?.deliveryTo?.trim();
+      if (chassis && deliveryTo) {
+        map.set(chassis, deliveryTo);
+      }
+    });
+    return map;
+  }, [deliveryToAssignments]);
 
   const bookedCount = useMemo(
     () => allEntries.filter((entry) => hasMatchedPO(entry)).length,
@@ -283,7 +295,22 @@ const StockPage: React.FC = () => {
                       <TableCell>{entry["SO Number"] || "-"}</TableCell>
                       <TableCell>{entry["Vin Number"] || (entry as Record<string, any>)["VIN Number"] || "-"}</TableCell>
                       <TableCell>{entry.Model || "-"}</TableCell>
-                      <TableCell>{entry["Scheduled Dealer"] || "-"}</TableCell>
+                      <TableCell
+                        className={
+                          deliveryToLookup.has((entry["Chassis No"] || "").toLowerCase().trim())
+                            ? "bg-emerald-50 font-semibold text-emerald-900"
+                            : undefined
+                        }
+                      >
+                        {(() => {
+                          const scheduledDealer = entry["Scheduled Dealer"] || "-";
+                          const deliveryTo = deliveryToLookup.get(
+                            (entry["Chassis No"] || "").toLowerCase().trim()
+                          );
+                          if (!deliveryTo) return scheduledDealer;
+                          return `${scheduledDealer} (${deliveryTo})`;
+                        })()}
+                      </TableCell>
                       <TableCell>{entry.reallocatedTo || "-"}</TableCell>
                       <TableCell>{entry.TransportCompany || "-"}</TableCell>
                       <TableCell>{formatPickup(entry.EstimatedPickupAt)}</TableCell>

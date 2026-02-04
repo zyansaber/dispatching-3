@@ -137,6 +137,19 @@ export interface DispatchingNoteEntry {
 export type DispatchingNoteData = Record<string, DispatchingNoteEntry>;
 
 /** ----------------------------
+ *  Delivery To Assignments (/deliveryToAssignments)
+ * ----------------------------- */
+
+export interface DeliveryToAssignment {
+  chassis?: string;
+  deliveryTo?: string;
+  sourceDealerSlug?: string;
+  updatedAt?: string;
+}
+
+export type DeliveryToAssignments = Record<string, DeliveryToAssignment>;
+
+/** ----------------------------
  *  Transport Companies（/transportCompanies）
  * ----------------------------- */
 
