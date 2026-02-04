@@ -7,6 +7,7 @@ import { ArrowUpDown, AlertTriangle, Mail, Download, ChevronDown, X } from "luci
 import {
   ProcessedDispatchEntry,
   ProcessedReallocationEntry,
+  DeliveryToAssignments,
   TransportConfig,
   TransportPreferenceData,
   TransportPreferenceItem,
@@ -227,6 +228,7 @@ export const DispatchStats: React.FC<DispatchStatsProps> = ({
 interface DispatchTableProps {
   allData: ProcessedDispatchEntry[];
   activeFilter?: 'all' | 'wrongStatus' | 'noReference' | 'snowy' | 'canBeDispatched' | 'onHold' | 'booked' | 'temporaryLeaving' | 'invalidStock' | 'serviceTicket';
+  deliveryToAssignments?: DeliveryToAssignments;
   transportCompanies?: TransportConfig;
   transportPreferences?: TransportPreferenceData;
   grRangeFilter?: SidebarFilter | null;
@@ -235,6 +237,7 @@ interface DispatchTableProps {
 export const DispatchTable: React.FC<DispatchTableProps> = ({
   allData,
   activeFilter = "all",
+  deliveryToAssignments = {},
   transportCompanies = {},
   transportPreferences = {},
   grRangeFilter = null,
@@ -254,6 +257,18 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   const [error, setError]               = useState<Record<string, string | undefined>>({});
   const [openCompanyRow, setOpenCompanyRow] = useState<string | null>(null);
   const [companySearchByRow, setCompanySearchByRow] = useState<Record<string, string>>({});
+
+  const deliveryToLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    Object.entries(deliveryToAssignments || {}).forEach(([key, value]) => {
+      const chassis = (value?.chassis || key || "").toLowerCase().trim();
+      const deliveryTo = value?.deliveryTo?.trim();
+      if (chassis && deliveryTo) {
+        map.set(chassis, deliveryTo);
+      }
+    });
+    return map;
+  }, [deliveryToAssignments]);
 
   useEffect(() => {
     if (!allData?.length) return;
@@ -1075,6 +1090,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   const barColor = getGRDaysColor(entry["GR to GI Days"] || 0);
                   const barWidth = getGRDaysWidth(entry["GR to GI Days"] || 0, maxGRDays);
                   const rowBg = idx % 2 === 0 ? "bg-white" : "bg-slate-50/60";
+                  const deliveryTo = deliveryToLookup.get(chassisNo.toLowerCase().trim());
 
                   const commentValue = commentDraft[rowKey] ?? (entry.Comment ?? "");
                   const pickupLocal  = pickupDraft[rowKey]  ?? (entry.EstimatedPickupAt ? isoToLocal(entry.EstimatedPickupAt) : "");
@@ -1145,7 +1161,18 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry.Customer || ""}>{entry.Customer || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry.Model || ""}>{entry.Model || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["SAP Data"] || ""}>{entry["SAP Data"] || "-"}</TableCell>
-                        <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Scheduled Dealer"] || ""}>{entry["Scheduled Dealer"] || "-"}</TableCell>
+                        <TableCell
+                          className={`${CELL} ${CELL_VDIV} ${
+                            deliveryTo ? "bg-emerald-50 font-semibold text-emerald-900" : ""
+                          }`}
+                          title={entry["Scheduled Dealer"] || ""}
+                        >
+                          {(() => {
+                            const scheduledDealer = entry["Scheduled Dealer"] || "-";
+                            if (!deliveryTo) return scheduledDealer;
+                            return `${scheduledDealer} (${deliveryTo})`;
+                          })()}
+                        </TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Matched PO No"] || ""}>{entry["Matched PO No"] || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`}>
                           <div className="flex flex-col gap-2">
