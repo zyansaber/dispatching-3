@@ -67,6 +67,7 @@ const COLS = [
   { key: "Model",            w: 120 },
   { key: "SAP Data",         w: 150 },
   { key: "Scheduled Dealer", w: 150 },
+  { key: "Reallocation",     w: 150 },
   { key: "Matched PO No",    w: 150 },
   { key: "Transport",        w: 180 },
   { key: "Action",           w: 160 },
@@ -1024,6 +1025,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Model</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>SAP Data</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Scheduled Dealer</TableCell>
+      <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Reallocation</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Matched PO No</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 ${CELL_VDIV}`}>Transport</TableCell>
       <TableCell className={`py-2 text-[11px] font-medium text-slate-500 text-center ${CELL_VDIV}`}>Action</TableCell>
@@ -1075,6 +1077,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   <SortableHeader sortKey="Model">Model</SortableHeader>
                   <SortableHeader sortKey="SAP Data">SAP Data</SortableHeader>
                   <SortableHeader sortKey="Scheduled Dealer">Scheduled Dealer</SortableHeader>
+                  <SortableHeader sortKey="reallocatedTo">Reallocation</SortableHeader>
                   <SortableHeader sortKey="Matched PO No">Matched PO No</SortableHeader>
                   <SortableHeader sortKey="TransportCompany">Transport</SortableHeader>
                   <TableHead className={`text-center align-top pt-3 font-medium text-slate-800 ${CELL_VDIV}`}>
@@ -1172,6 +1175,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                             if (!deliveryTo) return scheduledDealer;
                             return `${scheduledDealer} (${deliveryTo})`;
                           })()}
+                        </TableCell>
+                        <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry.reallocatedTo || ""}>
+                          {entry.reallocatedTo || "-"}
                         </TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`} title={entry["Matched PO No"] || ""}>{entry["Matched PO No"] || "-"}</TableCell>
                         <TableCell className={`${CELL} ${CELL_VDIV}`}>
@@ -1449,14 +1455,14 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
                       {/* 第二行：编辑 & 扩展 */}
                       <TableRow className={`${rowBg}`}>
-                      {/* 第二行合并 11 列（不含左条） */}
-                      <TableCell colSpan={11} className="border-b border-slate-200">
-                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 py-3 px-2">
+                      {/* 第二行合并 12 列（不含左条） */}
+                      <TableCell colSpan={12} className="border-b border-slate-200">
+                          <div className="flex flex-wrap items-center gap-4 py-3 px-2 text-base lg:flex-nowrap">
                             {/* Comment */}
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[13px] text-slate-600 w-28 shrink-0">Comment</span>
+                              <span className="text-base text-slate-600 w-28 shrink-0">Comment</span>
                               <Input
-                                className={`w-full max-w-[320px] ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                                className={`w-full max-w-[360px] text-base ${hasComment ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                                 placeholder="Add a comment"
                                 value={commentValue}
                                 onChange={(e) => setCommentDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
@@ -1475,10 +1481,10 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
                             {/* Estimated pickup */}
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[13px] text-slate-600 w-28 shrink-0">Pickup</span>
+                              <span className="text-base text-slate-600 w-24 shrink-0">Pickup</span>
                               <input
                                 type="datetime-local"
-                                className={`px-2 py-1 border rounded w-full max-w-[260px] ${hasPickup ? "border-emerald-300 bg-emerald-50/70" : ""}`}
+                                className={`px-2 py-1 border rounded w-full max-w-[260px] text-base ${hasPickup ? "border-emerald-300 bg-emerald-50/70" : ""}`}
                                 min={minLocalNow}
                                 value={pickupLocal}
                                 onChange={(e) => setPickupDraft((m) => ({ ...m, [rowKey]: e.target.value }))}
@@ -1496,9 +1502,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
                             {/* Checks */}
                             <div className="flex items-center gap-3 min-w-0">
-                              <span className="text-[13px] text-slate-600 w-24 shrink-0">Checks</span>
+                              <span className="text-base text-slate-600 w-20 shrink-0">Checks</span>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs ${
+                                className={`px-2 py-1 rounded-full text-sm ${
                                   statusCategory === "ok" ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                 }`}
                                 title={`Status: ${statusLabel}`}
@@ -1506,7 +1512,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                 Status: {statusLabel}
                               </span>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs ${
+                                className={`px-2 py-1 rounded-full text-sm ${
                                   entry.DealerCheck === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                 }`}
                                 title={`Dealer: ${entry.DealerCheck || "-"}`}
@@ -1515,20 +1521,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                               </span>
                             </div>
 
-                            {/* Reallocation（红） */}
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[13px] text-slate-600 w-28 shrink-0">Reallocation</span>
-                              <span
-                                className={`px-2 py-1 rounded text-xs ${entry.reallocatedTo ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-slate-100 text-slate-500'}`}
-                                title={entry.reallocatedTo || "-"}
-                              >
-                                {entry.reallocatedTo || "-"}
-                              </span>
-                            </div>
-
                             {/* Actions */}
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[13px] text-slate-600 w-20 shrink-0">Actions</span>
+                              <span className="text-base text-slate-600 w-20 shrink-0">Actions</span>
                               <div className="flex flex-wrap items-center gap-2">
                                 <Input
                                   value={reportNotes[chassisNo] ?? ""}
@@ -1539,14 +1534,14 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                                     }))
                                   }
                                   placeholder="Error note"
-                                  className="h-8 w-44 text-xs"
+                                  className="h-9 w-52 text-base"
                                 />
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleReportError(entry)}
                                   disabled={sendingEmail === chassisNo}
-                                  className="inline-flex items-center gap-1 text-xs"
+                                  className="inline-flex items-center gap-1 text-sm"
                                 >
                                   {sendingEmail === chassisNo ? (
                                     <>
@@ -1568,7 +1563,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
                       {/* 组间留白（柔和分隔） */}
                       <TableRow>
-                        <TableCell colSpan={12} className="p-0">
+                        <TableCell colSpan={13} className="p-0 bg-slate-100">
                           <div className="h-3" />
                         </TableCell>
                       </TableRow>
