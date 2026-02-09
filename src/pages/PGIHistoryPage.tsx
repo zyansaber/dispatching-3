@@ -109,6 +109,13 @@ const isNoGrStatus = (value?: string | null) => {
   return value.toLowerCase().includes("no gr");
 };
 
+const csvEscape = (value: string) => {
+  if (value.includes("\"") || value.includes(",") || value.includes("\n")) {
+    return `"${value.replace(/"/g, "\"\"")}"`;
+  }
+  return value;
+};
+
 const PGIHistoryPage: React.FC = () => {
   const [records, setRecords] = useState<PgiHistoryRow[]>([]);
   const [deliveryDocs, setDeliveryDocs] = useState<DeliveryDoc[]>([]);
@@ -317,6 +324,19 @@ const PGIHistoryPage: React.FC = () => {
     }));
   }, [selectedMonth, sortedRecords]);
 
+  const selectedMonthCount = useMemo(() => {
+    if (selectedMonth === "all") return filteredRecords.length;
+    const [yearStr, monthStr] = selectedMonth.split("-");
+    const year = Number.parseInt(yearStr, 10);
+    const month = Number.parseInt(monthStr, 10) - 1;
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return 0;
+    return filteredRecords.filter((record) => {
+      const date = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
+      if (!date) return false;
+      return date.getFullYear() === year && date.getMonth() === month;
+    }).length;
+  }, [filteredRecords, selectedMonth]);
+
   const docsByChassis = useMemo(() => {
     const map = new Map<string, DeliveryDoc[]>();
     sortedRecords.forEach((record) => {
@@ -327,6 +347,47 @@ const PGIHistoryPage: React.FC = () => {
     });
     return map;
   }, [deliveryDocs, sortedRecords]);
+
+  const handleDownload = () => {
+    if (sortedRecords.length === 0) return;
+    const headers = [
+      "Chassis Number",
+      "Dealer",
+      "PGI Date",
+      "PO Number",
+      "Vendor Name",
+      "PO Price",
+      "GR Status",
+      "GR Date",
+      "Delivery Doc",
+    ];
+    const rows = sortedRecords.map((record) => {
+      const docs = docsByChassis.get(record.chassisNumber) || [];
+      return [
+        record.chassisNumber || "",
+        record.dealer || "",
+        record.pgidate || "",
+        record.poNumber || "",
+        record.vendorName || "",
+        record.poPrice != null ? String(record.poPrice) : "",
+        record.grStatus || "",
+        record.grDateLast || "",
+        docs.map((doc) => doc.name).join("; "),
+      ].map((value) => csvEscape(String(value)));
+    });
+    const csvContent = [headers.map(csvEscape).join(","), ...rows.map((row) => row.join(","))].join(
+      "\n"
+    );
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pgi-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-4">
@@ -520,8 +581,17 @@ const PGIHistoryPage: React.FC = () => {
             <div className="rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur">
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
                 <div>
-                  <div className="text-sm font-semibold text-slate-600">PGI Date Activity</div>
-                  <div className="text-xs text-slate-400">Daily counts by PGI date</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-semibold text-slate-600">PGI Date Activity</div>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                      Total: {selectedMonthCount}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {selectedMonth === "all"
+                      ? "Daily counts by PGI date"
+                      : `Daily counts in ${formatMonthLabel(selectedMonth)}`}
+                  </div>
                 </div>
                 <label className="flex flex-col gap-2 text-xs font-medium text-slate-500">
                   Month
@@ -557,6 +627,14 @@ const PGIHistoryPage: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+            <div className="text-sm text-slate-500">
+              Showing {sortedRecords.length} PGI record{sortedRecords.length === 1 ? "" : "s"}
+            </div>
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              Download table CSV
+            </Button>
           </div>
           <div className="overflow-x-auto">
             <Table className="min-w-full border-separate border-spacing-y-2">
