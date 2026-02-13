@@ -568,11 +568,7 @@ export const getDispatchStats = (
     isSnowyStock(e, chassisToReallocatedTo)
   ).length;
   const waitingForBooking = processedEntries.filter(
-    (e) => {
-      if (isSnowyStock(e, chassisToReallocatedTo) || isBookedEntry(e)) return false;
-      const company = e.TransportCompany;
-      return typeof company === "string" ? company.trim().length > 0 : Boolean(company);
-    }
+    (e) => !isSnowyStock(e, chassisToReallocatedTo) && !isBookedEntry(e)
   ).length;
   const canBeDispatched = processedEntries.filter(
     (e) =>

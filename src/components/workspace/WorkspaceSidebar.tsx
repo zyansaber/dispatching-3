@@ -5,16 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { NavLink } from "react-router-dom";
 import {
+  BarChart3,
   ClipboardList,
   LayoutDashboard,
   PanelLeft,
   PanelRight,
   Package,
+  PauseCircle,
   Printer,
   Ticket,
   ShieldCheck,
   FileWarning,
   FileText,
+  Truck,
   History,
   SlidersHorizontal,
 } from "lucide-react";
@@ -98,8 +101,8 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                     {({ isActive }) => (
                       <Button
                         variant="ghost"
-                        className={`group relative flex w-full items-center justify-start gap-3 rounded-lg px-3 py-3 text-base font-medium transition ${
-                          collapsed ? "justify-center px-2 text-sm" : ""
+                        className={`group relative flex w-full items-center justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                          collapsed ? "justify-center px-2 text-xs" : ""
                         } ${
                           isActive
                             ? "bg-slate-800 text-white shadow-inner ring-1 ring-slate-700"
@@ -107,13 +110,13 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                         }`}
                       >
                         <span
-                          className={`flex h-10 w-10 items-center justify-center rounded-md border text-slate-100 shadow-sm transition ${
+                          className={`flex h-9 w-9 items-center justify-center rounded-md border text-slate-100 shadow-sm transition ${
                             isActive
                               ? "border-slate-600 bg-slate-800"
                               : "border-slate-800 bg-slate-900 group-hover:border-slate-700"
                           }`}
                         >
-                          <item.icon className="h-5 w-5" />
+                          <item.icon className="h-4 w-4" />
                         </span>
                         {!collapsed && <span className="truncate text-left leading-tight">{item.label}</span>}
                         {collapsed && <span className="sr-only">{item.label}</span>}
@@ -178,6 +181,41 @@ const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
                 </CardContent>
               </Card>
 
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Card className="border border-slate-800 bg-slate-900/80 shadow-inner">
+                  <CardHeader className="px-4 pt-4 pb-2">
+                    <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+                      <PauseCircle className="h-3.5 w-3.5" />
+                      <span>On Hold</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4 pt-1">
+                    <div className="text-xl font-semibold text-white">{totals.onHold}</div>
+                  </CardContent>
+                </Card>
+                <Card className="border border-slate-800 bg-slate-900/80 shadow-inner">
+                  <CardHeader className="px-4 pt-4 pb-2">
+                    <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+                      <Truck className="h-3.5 w-3.5" />
+                      <span>Booked</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4 pt-1">
+                    <div className="text-xl font-semibold text-white">{totals.booked}</div>
+                  </CardContent>
+                </Card>
+                <Card className="border border-slate-800 bg-slate-900/80 shadow-inner sm:col-span-2">
+                  <CardHeader className="px-4 pt-4 pb-2">
+                    <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      <span>Transport time, no PO</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4 pt-1">
+                    <div className="text-xl font-semibold text-white">{totals.transportNoPO}</div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         )}
