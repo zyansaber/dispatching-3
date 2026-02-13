@@ -46,6 +46,10 @@ const STATS_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
 const resolveVinNumber = (entry: ProcessedDispatchEntry) =>
   entry["Vin Number"] ?? (entry as Record<string, any>)["VIN Number"] ?? "";
+const hasSelectedTransportCompany = (entry: ProcessedDispatchEntry) => {
+  const company = entry.TransportCompany;
+  return typeof company === "string" ? company.trim().length > 0 : Boolean(company);
+};
 const isSnowyStockEntry = (entry: ProcessedDispatchEntry) => {
   if (entry.reallocatedTo === "Snowy Stock") return true;
   return (
@@ -346,13 +350,12 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       if (activeFilter === "invalidStock") arr = arr.filter(e => e.InvalidStock === true);
       if (activeFilter === "serviceTicket") arr = arr.filter(e => e.ServiceTicket === true);
       if (activeFilter === "booked")    arr = arr.filter(e => {
-        const poNo = e["Matched PO No"];
         return (
           !e.OnHold &&
           !e.TemporaryLeavingWithoutPGI &&
           !e.InvalidStock &&
           !e.ServiceTicket &&
-          (typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo))
+          hasSelectedTransportCompany(e)
         );
       });
       if (activeFilter === "snowy")
@@ -367,14 +370,12 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       if (activeFilter === "canBeDispatched")
         arr = arr.filter(
           (e) =>
-            (e.Statuscheck === "OK" ||
-              getStatusCheckCategory(e.Statuscheck) === "wrongStatus" ||
-              getStatusCheckCategory(e.Statuscheck) === "noReference") &&
             !e.OnHold &&
             !e.TemporaryLeavingWithoutPGI &&
             !e.InvalidStock &&
             !e.ServiceTicket &&
-            !isSnowyStockEntry(e)
+            !isSnowyStockEntry(e) &&
+            !hasSelectedTransportCompany(e)
         );
     }
 
@@ -389,6 +390,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         matches(e.Customer) ||
         matches(e.Model) ||
         matches(e["Scheduled Dealer"]) ||
+        matches(e.reallocatedTo) ||
+        matches(deliveryToLookup.get((e["Chassis No"] || "").toLowerCase().trim())) ||
         matches(e.TransportDealer)
       );
     }
@@ -916,13 +919,12 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     for (const row of allData) {
       const company = row.TransportCompany?.trim();
       if (!company) continue;
-      const poNo = row["Matched PO No"];
       const hasBooked =
         !row.OnHold &&
         !row.TemporaryLeavingWithoutPGI &&
         !row.InvalidStock &&
         !row.ServiceTicket &&
-        (typeof poNo === "string" ? poNo.trim().length > 0 : Boolean(poNo));
+        hasSelectedTransportCompany(row);
       if (!hasBooked) continue;
       counts[company] = (counts[company] || 0) + 1;
     }
@@ -1039,6 +1041,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Dispatch Data</h2>
           <p className="text-base text-slate-500">Search by chassis, customer, model, or dealer.</p>
+          {searchTerm.trim() && (
+            <p className="text-sm text-slate-600">Found {filtered.length} results</p>
+          )}
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Input
