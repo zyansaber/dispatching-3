@@ -321,7 +321,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
   const filtered = useMemo(() => {
     let arr = baseMerged;
-    const hasSearch = searchTerm.trim().length > 0;
+    const normalizedSearchTerm = searchTerm.trim();
+    const hasSearch = normalizedSearchTerm.length > 0;
 
     if (grRangeFilter?.kind === "grRange") {
       arr = arr.filter((e) => {
@@ -379,9 +380,15 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
     }
 
     if (hasSearch) {
-      const s = searchTerm.toLowerCase();
-      const matches = (value?: string | number | null) =>
-        value != null && String(value).toLowerCase().includes(s);
+      const keyword = normalizedSearchTerm.toLowerCase();
+      const normalizedKeyword = keyword.replace(/[()（）\s-]/g, "");
+      const matches = (value?: string | number | null) => {
+        if (value == null) return false;
+        const text = String(value).toLowerCase();
+        if (text.includes(keyword)) return true;
+        if (!normalizedKeyword) return false;
+        return text.replace(/[()（）\s-]/g, "").includes(normalizedKeyword);
+      };
       arr = arr.filter((e) =>
         matches(e["Chassis No"]) ||
         matches(e["SO Number"]) ||
@@ -389,6 +396,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         matches(e.Customer) ||
         matches(e.Model) ||
         matches(e["Scheduled Dealer"]) ||
+        matches(e.reallocatedTo) ||
         matches(e.TransportDealer)
       );
     }
@@ -1038,7 +1046,12 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Dispatch Data</h2>
-          <p className="text-base text-slate-500">Search by chassis, customer, model, or dealer.</p>
+          <p className="text-base text-slate-500">Search by chassis, customer, model, scheduled dealer, or reallocation.</p>
+          {searchTerm.trim() && (
+            <p className="mt-1 text-sm text-slate-600">
+              Found <span className="font-semibold text-slate-900">{filtered.length}</span> result{filtered.length === 1 ? "" : "s"} for “{searchTerm.trim()}”.
+            </p>
+          )}
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Input
