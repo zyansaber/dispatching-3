@@ -339,6 +339,7 @@ const PrintDocPage: React.FC = () => {
               <thead>
                 <tr>
                   <th>Chassis Number</th>
+                  <th>Model</th>
                   <th>VIN Number</th>
                   <th>Sales Order Number</th>
                   <th>Destination Dealership (SAP Data)</th>
@@ -348,6 +349,7 @@ const PrintDocPage: React.FC = () => {
                 {renderRows.map((row, index) => (
                   <tr key={row["Chassis No"] || `placeholder-${index}`}>
                     <td>{row["Chassis No"] || ""}</td>
+                    <td>{row.Model || (row as Record<string, any>).model || ""}</td>
                     <td>{row["Vin Number"] || (row as Record<string, any>)["VIN Number"] || ""}</td>
                     <td>{row["SO Number"] || ""}</td>
                     <td>{row["SAP Data"] || ""}</td>
@@ -463,6 +465,7 @@ const PrintDocPage: React.FC = () => {
               <thead>
                 <tr>
                   <th>Chassis Number</th>
+                  <th>Model</th>
                   <th>VIN Number</th>
                   <th>Destination Dealership (SAP Data)</th>
                 </tr>
@@ -471,6 +474,7 @@ const PrintDocPage: React.FC = () => {
                 {renderRows.map((row, index) => (
                   <tr key={`${row["Chassis No"] || `placeholder-${index}`}-evidence`}>
                     <td>{row["Chassis No"] || ""}</td>
+                    <td>{row.Model || (row as Record<string, any>).model || ""}</td>
                     <td>{row["Vin Number"] || (row as Record<string, any>)["VIN Number"] || ""}</td>
                     <td>{row["SAP Data"] || ""}</td>
                   </tr>
@@ -547,6 +551,7 @@ const PrintDocPage: React.FC = () => {
               <thead>
                 <tr>
                   <th>Chassis Number</th>
+                  <th>Model</th>
                   <th>VIN Number</th>
                   <th>Destination Dealership (SAP Data)</th>
                 </tr>
@@ -555,6 +560,7 @@ const PrintDocPage: React.FC = () => {
                 {renderRows.map((row, index) => (
                   <tr key={`${row["Chassis No"] || `placeholder-${index}`}-delivery`}>
                     <td>{row["Chassis No"] || ""}</td>
+                    <td>{row.Model || (row as Record<string, any>).model || ""}</td>
                     <td>{row["Vin Number"] || (row as Record<string, any>)["VIN Number"] || ""}</td>
                     <td>{row["SAP Data"] || ""}</td>
                   </tr>
