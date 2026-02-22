@@ -12,6 +12,7 @@ import TransportDamageRecordPage from './pages/TransportDamageRecordPage';
 import PGIHistoryPage from './pages/PGIHistoryPage';
 import WorkflowPage from './pages/WorkflowPage';
 import TransportPreferencePage from './pages/TransportPreferencePage';
+import TemporaryLeavingTransportPage from './pages/TemporaryLeavingTransportPage';
 import NotFound from './pages/NotFound';
 
 const App = () => (
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="workflow" element={<WorkflowPage />} />
           <Route path="transport-damage" element={<TransportDamageRecordPage />} />
           <Route path="transport-preference" element={<TransportPreferencePage />} />
+          <Route path="temporary-leaving-transport" element={<TemporaryLeavingTransportPage />} />
           <Route path="pgi-history" element={<PGIHistoryPage />} />
           <Route path="reallocation" element={<ReallocationPage />} />
           <Route path="service-ticket" element={<ServiceTicketPage />} />

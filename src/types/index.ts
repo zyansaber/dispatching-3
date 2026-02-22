@@ -44,6 +44,11 @@ export interface DispatchEntry {
   TemporaryLeavingWithoutPGI?: boolean;
   TemporaryLeavingWithoutPGIAt?: string | null;
   TemporaryLeavingWithoutPGIBy?: string | null;
+  TemporaryLeavingReturnFactory?: boolean;
+  TemporaryLeavingReturnFactoryAt?: string | null;
+  TemporaryLeavingReturnPO?: string | null;
+  TemporaryLeavingDirectToPGI?: boolean;
+  TemporaryLeavingDirectToPGIAt?: string | null;
 
   /** ✅ 新增：Invalid stock（待确认）状态 */
   InvalidStock?: boolean;
