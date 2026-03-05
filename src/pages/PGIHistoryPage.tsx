@@ -126,6 +126,7 @@ const PGIHistoryPage: React.FC = () => {
   const [onlyNoGr, setOnlyNoGr] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [chassisSearch, setChassisSearch] = useState<string>("");
   const [customStart, setCustomStart] = useState<string>(() =>
     formatDateInput(new Date(new Date().getFullYear(), 0, 1))
   );
@@ -213,6 +214,12 @@ const PGIHistoryPage: React.FC = () => {
         return false;
       }
 
+      if (chassisSearch.trim()) {
+        const search = chassisSearch.trim().toLowerCase();
+        const chassis = record.chassisNumber ? String(record.chassisNumber).toLowerCase() : "";
+        if (!chassis.includes(search)) return false;
+      }
+
       const pgiDate = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
       if (!pgiDate) return false;
 
@@ -242,6 +249,7 @@ const PGIHistoryPage: React.FC = () => {
     customEnd,
     customStart,
     dealerFilter,
+    chassisSearch,
     onlyNoGr,
     periodFilter,
     records,
@@ -250,7 +258,16 @@ const PGIHistoryPage: React.FC = () => {
   ]);
 
   const sortedRecords = useMemo(() => {
-    const items = [...filteredRecords];
+    const monthFilteredRecords =
+      selectedMonth === "all"
+        ? filteredRecords
+        : filteredRecords.filter((record) => {
+            const date = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
+            if (!date) return false;
+            const monthValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+            return monthValue === selectedMonth;
+          });
+    const items = [...monthFilteredRecords];
     items.sort((a, b) => {
       const dateA = parsePgiDate(a.pgidate ? String(a.pgidate) : "")?.getTime() ?? 0;
       const dateB = parsePgiDate(b.pgidate ? String(b.pgidate) : "")?.getTime() ?? 0;
@@ -258,13 +275,13 @@ const PGIHistoryPage: React.FC = () => {
       return (a.chassisNumber || "").localeCompare(b.chassisNumber || "");
     });
     return items;
-  }, [filteredRecords]);
+  }, [filteredRecords, selectedMonth]);
 
   const stats = useMemo(() => {
-    const noGrCount = filteredRecords.filter((record) =>
+    const noGrCount = sortedRecords.filter((record) =>
       isNoGrStatus(record.grStatus ? String(record.grStatus) : "")
     ).length;
-    const prices = filteredRecords
+    const prices = sortedRecords
       .map((record) => {
         const raw = record.poPrice;
         if (raw == null || raw === "") return null;
@@ -275,11 +292,12 @@ const PGIHistoryPage: React.FC = () => {
     const totalPrice = prices.reduce((sum, value) => sum + value, 0);
     const averagePrice = prices.length ? totalPrice / prices.length : 0;
     return {
+      totalPgi: sortedRecords.length,
       noGrCount,
       totalPrice,
       averagePrice,
     };
-  }, [filteredRecords]);
+  }, [sortedRecords]);
 
   const monthOptions = useMemo(() => {
     const months = new Set<string>();
@@ -324,18 +342,7 @@ const PGIHistoryPage: React.FC = () => {
     }));
   }, [selectedMonth, sortedRecords]);
 
-  const selectedMonthCount = useMemo(() => {
-    if (selectedMonth === "all") return filteredRecords.length;
-    const [yearStr, monthStr] = selectedMonth.split("-");
-    const year = Number.parseInt(yearStr, 10);
-    const month = Number.parseInt(monthStr, 10) - 1;
-    if (!Number.isFinite(year) || !Number.isFinite(month)) return 0;
-    return filteredRecords.filter((record) => {
-      const date = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
-      if (!date) return false;
-      return date.getFullYear() === year && date.getMonth() === month;
-    }).length;
-  }, [filteredRecords, selectedMonth]);
+  const selectedMonthCount = sortedRecords.length;
 
   const docsByChassis = useMemo(() => {
     const map = new Map<string, DeliveryDoc[]>();
@@ -400,7 +407,15 @@ const PGIHistoryPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4 pb-4">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
+              <Card className="border border-slate-200 bg-white/90 shadow-sm backdrop-blur">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">PGI Total</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-semibold text-slate-900">{stats.totalPgi}</div>
+                </CardContent>
+              </Card>
               <Card className="border border-slate-200 bg-white/90 shadow-sm backdrop-blur">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-slate-500">No GR</CardTitle>
@@ -479,7 +494,17 @@ const PGIHistoryPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 xl:col-span-2">
+                    Chassis search
+                    <input
+                      type="search"
+                      placeholder="Search chassis number"
+                      className="h-10 rounded-md border border-input bg-white px-3 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={chassisSearch}
+                      onChange={(event) => setChassisSearch(event.target.value)}
+                    />
+                  </label>
                   <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                     Vendor
                     <select
