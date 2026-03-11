@@ -2,387 +2,753 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { subscribePgiRecords, storage } from "@/lib/firebase";
-import { sendPgiMissingEmail } from "@/lib/emailjs";
 import type { PgiRecordData, PgiRecordEntry } from "@/types";
 import { getDownloadURL, listAll, ref as storageRef } from "firebase/storage";
-import { Mail } from "lucide-react";
-import { toast } from "sonner";
-import { useDashboardContext } from "./Index";
 
-type PgiHistoryRow = PgiRecordEntry & { chassisNumber: string; entryId?: string };
-type DeliveryDoc = { name: string; url: string; fullPath: string };
+type PgiHistoryRow = PgiRecordEntry & {
+  chassisNumber: string;
+  entryId?: string;
+};
+
+type DeliveryDoc = {
+  name: string;
+  url: string;
+  fullPath: string;
+};
+
 type PeriodFilter = "pgi2026" | "1m" | "3m" | "6m" | "custom";
-type RecipientType = "dealer" | "vendor";
+
+type ChassisStatus = "inTransit" | "completed" | "missingPo";
+type StatusFilter = "all" | ChassisStatus;
 
 const isRecordEntry = (value: unknown): value is PgiRecordEntry => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Record<string, unknown>;
-  return ["dealer", "poNumber", "vendorName", "grStatus", "pgidate"].some((key) => key in candidate);
+  return [
+    "dealer",
+    "poNumber",
+    "vendorName",
+    "grStatus",
+    "grDateLast",
+    "customer",
+    "model",
+    "pgidate",
+    "vinNumber",
+  ].some((key) => key in candidate);
 };
 
 const flattenPgiRecords = (data: PgiRecordData) => {
   const rows: PgiHistoryRow[] = [];
+
   Object.entries(data || {}).forEach(([chassisNumber, entries]) => {
-    if (isRecordEntry(entries)) return rows.push({ chassisNumber, ...entries });
+    if (isRecordEntry(entries)) {
+      rows.push({ chassisNumber, ...entries });
+      return;
+    }
+
     if (!entries || typeof entries !== "object") return;
     Object.entries(entries).forEach(([entryId, entry]) => {
       if (!isRecordEntry(entry)) return;
-      rows.push({ chassisNumber, entryId, ...entry });
+      rows.push({
+        chassisNumber,
+        entryId,
+        ...entry,
+      });
     });
   });
+
   return rows;
+};
+
+const formatPrice = (value?: number | string | null) => {
+  if (value == null || value === "") return "-";
+  const numeric = typeof value === "number" ? value : Number.parseFloat(String(value));
+  if (!Number.isFinite(numeric)) return String(value);
+  return numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const parsePgiDate = (value?: string | null) => {
   if (!value) return null;
-  const [day, month, year] = value.trim().split("/").map((part) => Number.parseInt(part, 10));
+  const parts = value.trim().split("/");
+  if (parts.length !== 3) return null;
+  const [day, month, year] = parts.map((part) => Number.parseInt(part, 10));
   if (!day || !month || !year) return null;
   const date = new Date(year, month - 1, day);
-  return Number.isNaN(date.getTime()) ? null : date;
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
 };
 
-const isMissingDeliveryAfter7Days = (record: PgiHistoryRow, docsByChassis: Map<string, DeliveryDoc[]>) => {
-  const pgiDate = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
-  if (!pgiDate) return false;
-  const ageDays = (Date.now() - pgiDate.getTime()) / (1000 * 60 * 60 * 24);
-  if (ageDays < 7) return false;
-  const docs = docsByChassis.get(record.chassisNumber) || [];
-  return docs.length === 0;
+const getChassisStatus = (record: PgiHistoryRow): ChassisStatus => {
+  const poNumber = record.poNumber ? String(record.poNumber).trim() : "";
+  if (!poNumber) return "missingPo";
+  const status = record.grStatus ? String(record.grStatus).toLowerCase() : "";
+  if (status.includes("posted") || status.includes("completed")) return "completed";
+  return "inTransit";
+};
+
+const formatMonthLabel = (value: string) => {
+  const [year, month] = value.split("-").map((part) => Number.parseInt(part, 10));
+  if (!year || !month) return value;
+  return new Date(year, month - 1, 1).toLocaleString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const formatDateInput = (date: Date) => date.toISOString().slice(0, 10);
+
+const formatDateRange = (start?: string, end?: string) => {
+  if (!start && !end) return "Custom range";
+  if (start && end) return `${start} → ${end}`;
+  return start ? `From ${start}` : `Until ${end}`;
+};
+
+const isNoGrStatus = (value?: string | null) => {
+  if (!value) return true;
+  return value.toLowerCase().includes("no gr");
+};
+
+const csvEscape = (value: string) => {
+  if (value.includes("\"") || value.includes(",") || value.includes("\n")) {
+    return `"${value.replace(/"/g, "\"\"")}"`;
+  }
+  return value;
 };
 
 const PGIHistoryPage: React.FC = () => {
-  const { transportCompanies, dealerEmails, pgiEmailTemplate, handleSavePgiEmailTemplate } = useDashboardContext();
   const [records, setRecords] = useState<PgiHistoryRow[]>([]);
   const [deliveryDocs, setDeliveryDocs] = useState<DeliveryDoc[]>([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState<boolean>(true);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("pgi2026");
-  const [vendorFilter, setVendorFilter] = useState("all");
-  const [dealerFilter, setDealerFilter] = useState("all");
+  const [vendorFilter, setVendorFilter] = useState<string>("all");
+  const [dealerFilter, setDealerFilter] = useState<string>("all");
+  const [onlyNoGr, setOnlyNoGr] = useState<boolean>(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
-  const [customStart, setCustomStart] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10));
-  const [customEnd, setCustomEnd] = useState(new Date().toISOString().slice(0, 10));
-  const [selectedDealerRisk, setSelectedDealerRisk] = useState<string>("all");
-  const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
-  const [recipientType, setRecipientType] = useState<RecipientType>("dealer");
-  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
-  const [templateSubject, setTemplateSubject] = useState(pgiEmailTemplate?.subject || "Missing Delivery Document Follow-up");
-  const [templateBody, setTemplateBody] = useState(
-    pgiEmailTemplate?.body ||
-      "Dear Team,\n\nThe following chassis is still missing Delivery Doc for more than 7 days after PGI.\n\nChassis Number: {{chassis_number}}\nPGI Date: {{pgi_date}}\nVendor Name: {{vendor_name}}\n\nPlease action urgently."
+  const [chassisSearch, setChassisSearch] = useState<string>("");
+  const [customStart, setCustomStart] = useState<string>(() =>
+    formatDateInput(new Date(new Date().getFullYear(), 0, 1))
+  );
+  const [customEnd, setCustomEnd] = useState<string>(() =>
+    formatDateInput(new Date())
   );
 
   useEffect(() => {
-    const unsubscribe = subscribePgiRecords((data: PgiRecordData) => setRecords(flattenPgiRecords(data)));
+    const unsubscribe = subscribePgiRecords((data: PgiRecordData) => {
+      const rows = flattenPgiRecords(data);
+      rows.sort((a, b) => (a.chassisNumber || "").localeCompare(b.chassisNumber || ""));
+      setRecords(rows);
+    });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!pgiEmailTemplate) return;
-    setTemplateSubject(pgiEmailTemplate.subject || "Missing Delivery Document Follow-up");
-    setTemplateBody(pgiEmailTemplate.body || "");
-  }, [pgiEmailTemplate]);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
+    let isMounted = true;
+    const fetchDocs = async () => {
+      setIsLoadingDocs(true);
       try {
-        const list = await listAll(storageRef(storage, "deliverydoc"));
-        const docs = await Promise.all(list.items.map(async (item) => ({ name: item.name, fullPath: item.fullPath, url: await getDownloadURL(item) })));
-        if (mounted) setDeliveryDocs(docs);
-      } catch {
-        toast.error("Failed to load delivery docs");
+        const folderRef = storageRef(storage, "deliverydoc");
+        const list = await listAll(folderRef);
+        const docs = await Promise.all(
+          list.items.map(async (item) => ({
+            name: item.name,
+            fullPath: item.fullPath,
+            url: await getDownloadURL(item),
+          }))
+        );
+        if (isMounted) {
+          setDeliveryDocs(docs);
+        }
+      } catch (error) {
+        console.error("Failed to load delivery docs", error);
+      } finally {
+        if (isMounted) {
+          setIsLoadingDocs(false);
+        }
       }
-    })();
+    };
+    fetchDocs();
     return () => {
-      mounted = false;
+      isMounted = false;
     };
   }, []);
 
-  const docsByChassis = useMemo(() => {
-    const map = new Map<string, DeliveryDoc[]>();
+  const vendorOptions = useMemo(() => {
+    const values = new Set<string>();
     records.forEach((record) => {
-      const matches = deliveryDocs.filter((doc) => doc.name.includes(record.chassisNumber));
-      if (matches.length) map.set(record.chassisNumber, matches);
+      const vendor = record.vendorName ? String(record.vendorName).trim() : "";
+      if (vendor) values.add(vendor);
     });
-    return map;
-  }, [deliveryDocs, records]);
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [records]);
+
+  const dealerOptions = useMemo(() => {
+    const values = new Set<string>();
+    records.forEach((record) => {
+      const dealer = record.dealer ? String(record.dealer).trim() : "";
+      if (dealer) values.add(dealer);
+    });
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [records]);
 
   const filteredRecords = useMemo(() => {
     const now = new Date();
-    const source = records.filter((record) => {
-      if (vendorFilter !== "all" && String(record.vendorName || "").trim() !== vendorFilter) return false;
-      if (dealerFilter !== "all" && String(record.dealer || "").trim() !== dealerFilter) return false;
+
+    return records.filter((record) => {
+      if (vendorFilter !== "all") {
+        const vendor = record.vendorName ? String(record.vendorName).trim() : "";
+        if (vendor !== vendorFilter) return false;
+      }
+
+      if (dealerFilter !== "all") {
+        const dealer = record.dealer ? String(record.dealer).trim() : "";
+        if (dealer !== dealerFilter) return false;
+      }
+
+      if (onlyNoGr && !isNoGrStatus(record.grStatus ? String(record.grStatus) : "")) {
+        return false;
+      }
+
+      if (statusFilter !== "all" && getChassisStatus(record) !== statusFilter) {
+        return false;
+      }
+
+      if (chassisSearch.trim()) {
+        const search = chassisSearch.trim().toLowerCase();
+        const chassis = record.chassisNumber ? String(record.chassisNumber).toLowerCase() : "";
+        if (!chassis.includes(search)) return false;
+      }
+
       const pgiDate = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
       if (!pgiDate) return false;
-      if (periodFilter === "pgi2026") return pgiDate.getFullYear() === 2026;
+
+      if (periodFilter === "pgi2026") {
+        return pgiDate.getFullYear() === 2026;
+      }
+
       if (periodFilter === "custom") {
         const start = customStart ? new Date(customStart) : null;
         const end = customEnd ? new Date(customEnd) : null;
+        if (start && Number.isNaN(start.getTime())) return false;
+        if (end && Number.isNaN(end.getTime())) return false;
         if (start && pgiDate < start) return false;
         if (end) {
-          const eod = new Date(end);
-          eod.setHours(23, 59, 59, 999);
-          if (pgiDate > eod) return false;
+          const endOfDay = new Date(end);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (pgiDate > endOfDay) return false;
         }
         return true;
       }
+
       const monthsBack = periodFilter === "1m" ? 1 : periodFilter === "3m" ? 3 : 6;
-      return pgiDate >= new Date(now.getFullYear(), now.getMonth() - monthsBack, now.getDate());
+      const cutoff = new Date(now.getFullYear(), now.getMonth() - monthsBack, now.getDate());
+      return pgiDate >= cutoff;
     });
-    const monthFiltered =
+  }, [
+    customEnd,
+    customStart,
+    dealerFilter,
+    chassisSearch,
+    onlyNoGr,
+    periodFilter,
+    records,
+    statusFilter,
+    vendorFilter,
+  ]);
+
+  const sortedRecords = useMemo(() => {
+    const monthFilteredRecords =
       selectedMonth === "all"
-        ? source
-        : source.filter((record) => {
+        ? filteredRecords
+        : filteredRecords.filter((record) => {
             const date = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
             if (!date) return false;
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` === selectedMonth;
+            const monthValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+            return monthValue === selectedMonth;
           });
-    return monthFiltered.sort((a, b) => (parsePgiDate(String(b.pgidate))?.getTime() || 0) - (parsePgiDate(String(a.pgidate))?.getTime() || 0));
-  }, [records, vendorFilter, dealerFilter, periodFilter, customStart, customEnd, selectedMonth]);
+    const items = [...monthFilteredRecords];
+    items.sort((a, b) => {
+      const dateA = parsePgiDate(a.pgidate ? String(a.pgidate) : "")?.getTime() ?? 0;
+      const dateB = parsePgiDate(b.pgidate ? String(b.pgidate) : "")?.getTime() ?? 0;
+      if (dateA !== dateB) return dateB - dateA;
+      return (a.chassisNumber || "").localeCompare(b.chassisNumber || "");
+    });
+    return items;
+  }, [filteredRecords, selectedMonth]);
+
+  const stats = useMemo(() => {
+    const noGrCount = sortedRecords.filter((record) =>
+      isNoGrStatus(record.grStatus ? String(record.grStatus) : "")
+    ).length;
+    const prices = sortedRecords
+      .map((record) => {
+        const raw = record.poPrice;
+        if (raw == null || raw === "") return null;
+        const value = typeof raw === "number" ? raw : Number.parseFloat(String(raw));
+        return Number.isFinite(value) ? value : null;
+      })
+      .filter((value): value is number => value != null);
+    const totalPrice = prices.reduce((sum, value) => sum + value, 0);
+    const averagePrice = prices.length ? totalPrice / prices.length : 0;
+    return {
+      totalPgi: sortedRecords.length,
+      noGrCount,
+      totalPrice,
+      averagePrice,
+    };
+  }, [sortedRecords]);
 
   const monthOptions = useMemo(() => {
     const months = new Set<string>();
     filteredRecords.forEach((record) => {
       const date = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
       if (!date) return;
-      months.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      months.add(value);
     });
     return Array.from(months).sort((a, b) => b.localeCompare(a));
   }, [filteredRecords]);
 
   useEffect(() => {
-    if (monthOptions.length && !monthOptions.includes(selectedMonth)) setSelectedMonth(monthOptions[0]);
+    if (monthOptions.length === 0) {
+      setSelectedMonth("all");
+      return;
+    }
+    if (selectedMonth === "all" || !monthOptions.includes(selectedMonth)) {
+      setSelectedMonth(monthOptions[0]);
+    }
   }, [monthOptions, selectedMonth]);
 
   const chartData = useMemo(() => {
-    if (selectedMonth === "all") return [] as Array<{ day: number; count: number; height: number }>;
+    if (selectedMonth === "all") return [];
     const [yearStr, monthStr] = selectedMonth.split("-");
-    const year = Number(yearStr);
-    const month = Number(monthStr) - 1;
+    const year = Number.parseInt(yearStr, 10);
+    const month = Number.parseInt(monthStr, 10) - 1;
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return [];
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const counts = Array.from({ length: daysInMonth }, () => 0);
-    filteredRecords.forEach((record) => {
+    sortedRecords.forEach((record) => {
       const date = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
-      if (!date || date.getFullYear() !== year || date.getMonth() !== month) return;
+      if (!date) return;
+      if (date.getFullYear() !== year || date.getMonth() !== month) return;
       counts[date.getDate() - 1] += 1;
     });
-    const max = Math.max(...counts, 1);
-    return counts.map((count, index) => ({ day: index + 1, count, height: Math.max((count / max) * 100, 6) }));
-  }, [filteredRecords, selectedMonth]);
-
-  const dealerRiskData = useMemo(() => {
-    const grouped = new Map<string, { total: number; missingAfter7Days: number }>();
-    filteredRecords.forEach((record) => {
-      const dealer = String(record.dealer || "Unknown").trim() || "Unknown";
-      const current = grouped.get(dealer) || { total: 0, missingAfter7Days: 0 };
-      current.total += 1;
-      if (isMissingDeliveryAfter7Days(record, docsByChassis)) current.missingAfter7Days += 1;
-      grouped.set(dealer, current);
-    });
-    const rows = Array.from(grouped.entries()).map(([dealer, value]) => ({
-      dealer,
-      ...value,
-      percentage: value.total ? (value.missingAfter7Days / value.total) * 100 : 0,
+    const maxCount = Math.max(...counts, 1);
+    return counts.map((count, index) => ({
+      day: index + 1,
+      count,
+      height: Math.max((count / maxCount) * 100, 6),
     }));
-    const max = Math.max(...rows.map((r) => r.percentage), 1);
-    return rows
-      .sort((a, b) => b.percentage - a.percentage)
-      .map((r) => ({ ...r, height: Math.max((r.percentage / max) * 100, 6) }));
-  }, [docsByChassis, filteredRecords]);
+  }, [selectedMonth, sortedRecords]);
 
-  const displayedRecords = useMemo(() => {
-    let rows = filteredRecords;
-    if (selectedDealerRisk !== "all") {
-      rows = rows.filter((r) => String(r.dealer || "Unknown").trim() === selectedDealerRisk);
-    }
-    return rows.filter((r) => !selectedDealerRisk || selectedDealerRisk === "all" || isMissingDeliveryAfter7Days(r, docsByChassis));
-  }, [filteredRecords, selectedDealerRisk, docsByChassis]);
+  const selectedMonthCount = sortedRecords.length;
 
-  const vendorEmailMap = useMemo(() => {
-    const map = new Map<string, string>();
-    Object.values(transportCompanies || {}).forEach((company) => {
-      if (company.name && company.email) map.set(company.name.trim(), company.email.trim());
+  const docsByChassis = useMemo(() => {
+    const map = new Map<string, DeliveryDoc[]>();
+    sortedRecords.forEach((record) => {
+      const chassis = record.chassisNumber;
+      if (!chassis || map.has(chassis)) return;
+      const matches = deliveryDocs.filter((doc) => doc.name.includes(chassis));
+      if (matches.length) map.set(chassis, matches);
     });
     return map;
-  }, [transportCompanies]);
+  }, [deliveryDocs, sortedRecords]);
 
-  const resolveRecipientEmail = (row: PgiHistoryRow) => {
-    if (recipientType === "dealer") return dealerEmails[String(row.dealer || "").trim()] || "";
-    return vendorEmailMap.get(String(row.vendorName || "").trim()) || "";
-  };
-
-  const renderTemplate = (row: PgiHistoryRow) =>
-    templateBody
-      .replaceAll("{{chassis_number}}", row.chassisNumber || "")
-      .replaceAll("{{pgi_date}}", String(row.pgidate || ""))
-      .replaceAll("{{vendor_name}}", String(row.vendorName || ""));
-
-  const sendOne = async (row: PgiHistoryRow) => {
-    const toEmail = resolveRecipientEmail(row);
-    if (!toEmail) return toast.error(`No ${recipientType} email for ${recipientType === "dealer" ? row.dealer : row.vendorName}`);
-    await sendPgiMissingEmail({
-      to_email: toEmail,
-      to_name: recipientType === "dealer" ? String(row.dealer || "") : String(row.vendorName || ""),
-      subject: templateSubject,
-      message: renderTemplate(row),
-      chassis_number: row.chassisNumber,
-      pgi_date: String(row.pgidate || ""),
-      vendor_name: String(row.vendorName || ""),
-      dealer_name: String(row.dealer || ""),
+  const handleDownload = () => {
+    if (sortedRecords.length === 0) return;
+    const headers = [
+      "Chassis Number",
+      "Dealer",
+      "PGI Date",
+      "PO Number",
+      "Vendor Name",
+      "PO Price",
+      "GR Status",
+      "GR Date",
+      "Delivery Doc",
+    ];
+    const rows = sortedRecords.map((record) => {
+      const docs = docsByChassis.get(record.chassisNumber) || [];
+      return [
+        record.chassisNumber || "",
+        record.dealer || "",
+        record.pgidate || "",
+        record.poNumber || "",
+        record.vendorName || "",
+        record.poPrice != null ? String(record.poPrice) : "",
+        record.grStatus || "",
+        record.grDateLast || "",
+        docs.map((doc) => doc.name).join("; "),
+      ].map((value) => csvEscape(String(value)));
     });
-    toast.success(`Email sent to ${toEmail}`);
+    const csvContent = [headers.map(csvEscape).join(","), ...rows.map((row) => row.join(","))].join(
+      "\n"
+    );
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pgi-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
-
-  const selectedRowsData = displayedRecords.filter((row) => selectedRows[`${row.chassisNumber}-${row.entryId || "root"}`]);
-
-  const sendBulk = async () => {
-    if (!selectedRowsData.length) return;
-    for (const row of selectedRowsData) {
-      // eslint-disable-next-line no-await-in-loop
-      await sendOne(row);
-    }
-  };
-
-  const vendors = Array.from(new Set(records.map((r) => String(r.vendorName || "").trim()).filter(Boolean))).sort();
-  const dealers = Array.from(new Set(records.map((r) => String(r.dealer || "").trim()).filter(Boolean))).sort();
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="border-border/80 shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg">PGI History</CardTitle>
-          <CardDescription>Track PGI, missing delivery docs, and notify dealers/vendors.</CardDescription>
+          <CardDescription>
+            PGI records with delivery documents from Firebase storage.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {(["pgi2026", "1m", "3m", "6m", "custom"] as PeriodFilter[]).map((p) => (
-              <Button key={p} size="sm" variant={periodFilter === p ? "default" : "outline"} onClick={() => setPeriodFilter(p)}>{p.toUpperCase()}</Button>
-            ))}
-            <select className="h-9 rounded-md border px-2" value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value)}>
-              <option value="all">All vendors</option>
-              {vendors.map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
-            <select className="h-9 rounded-md border px-2" value={dealerFilter} onChange={(e) => setDealerFilter(e.target.value)}>
-              <option value="all">All dealers</option>
-              {dealers.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-            <select className="h-9 rounded-md border px-2" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
-              <option value="all">All months</option>
-              {monthOptions.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-            {periodFilter === "custom" && (
-              <>
-                <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-40" />
-                <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-40" />
-              </>
-            )}
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border p-4">
-              <div className="mb-3 text-sm font-semibold">PGI Date Activity</div>
-              <div className="flex min-h-[140px] items-end gap-2 overflow-x-auto">
-                {chartData.map((bar) => (
-                  <div key={bar.day} className="flex flex-col items-center gap-1">
-                    <div className="w-3 rounded bg-blue-500" style={{ height: `${bar.height}px` }} title={`Day ${bar.day}: ${bar.count}`} />
-                    <span className="text-[10px] text-slate-500">{bar.day}</span>
+        <CardContent>
+          <div className="flex flex-col gap-4 pb-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <Card className="border border-slate-200 bg-white/90 shadow-sm backdrop-blur">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">PGI Total</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-semibold text-slate-900">{stats.totalPgi}</div>
+                </CardContent>
+              </Card>
+              <Card className="border border-slate-200 bg-white/90 shadow-sm backdrop-blur">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">No GR</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-semibold text-slate-900">{stats.noGrCount}</div>
+                </CardContent>
+              </Card>
+              <Card className="border border-slate-200 bg-white/90 shadow-sm backdrop-blur">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">Total Price</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-semibold text-slate-900">
+                    {formatPrice(stats.totalPrice)}
                   </div>
-                ))}
+                </CardContent>
+              </Card>
+              <Card className="border border-slate-200 bg-white/90 shadow-sm backdrop-blur">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-500">
+                    Avg Transport Price
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-semibold text-slate-900">
+                    {formatPrice(stats.averagePrice)}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-700">Period</div>
+                    <div className="text-xs text-slate-400">
+                      {periodFilter === "custom" ? formatDateRange(customStart, customEnd) : "Preset"}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={periodFilter === "pgi2026" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPeriodFilter("pgi2026")}
+                    >
+                      PGI 2026
+                    </Button>
+                    <Button
+                      variant={periodFilter === "1m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPeriodFilter("1m")}
+                    >
+                      1 Month
+                    </Button>
+                    <Button
+                      variant={periodFilter === "3m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPeriodFilter("3m")}
+                    >
+                      3 Months
+                    </Button>
+                    <Button
+                      variant={periodFilter === "6m" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPeriodFilter("6m")}
+                    >
+                      6 Months
+                    </Button>
+                    <Button
+                      variant={periodFilter === "custom" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPeriodFilter("custom")}
+                    >
+                      Custom
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 xl:col-span-2">
+                    Chassis search
+                    <input
+                      type="search"
+                      placeholder="Search chassis number"
+                      className="h-10 rounded-md border border-input bg-white px-3 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={chassisSearch}
+                      onChange={(event) => setChassisSearch(event.target.value)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Vendor
+                    <select
+                      className="h-10 rounded-md border border-input bg-white px-3 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={vendorFilter}
+                      onChange={(event) => setVendorFilter(event.target.value)}
+                    >
+                      <option value="all">All vendors</option>
+                      {vendorOptions.map((vendor) => (
+                        <option key={vendor} value={vendor}>
+                          {vendor}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Dealer
+                    <select
+                      className="h-10 rounded-md border border-input bg-white px-3 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={dealerFilter}
+                      onChange={(event) => setDealerFilter(event.target.value)}
+                    >
+                      <option value="all">All dealers</option>
+                      {dealerOptions.map((dealer) => (
+                        <option key={dealer} value={dealer}>
+                          {dealer}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Start date
+                    <input
+                      type="date"
+                      className="h-10 rounded-md border border-input bg-white px-3 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={customStart}
+                      onChange={(event) => {
+                        setCustomStart(event.target.value);
+                        setPeriodFilter("custom");
+                      }}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    End date
+                    <input
+                      type="date"
+                      className="h-10 rounded-md border border-input bg-white px-3 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={customEnd}
+                      onChange={(event) => {
+                        setCustomEnd(event.target.value);
+                        setPeriodFilter("custom");
+                      }}
+                    />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={statusFilter === "inTransit" ? "default" : "outline"}
+                    onClick={() =>
+                      setStatusFilter((prev) => (prev === "inTransit" ? "all" : "inTransit"))
+                    }
+                    className={
+                      statusFilter === "inTransit"
+                        ? "border-amber-300 bg-amber-100 text-amber-700 shadow-[0_0_8px_rgba(251,191,36,0.55)] hover:bg-amber-200"
+                        : "border-amber-200 text-amber-700 hover:border-amber-300 hover:bg-amber-50"
+                    }
+                  >
+                    In transit
+                  </Button>
+                  <Button
+                    variant={statusFilter === "completed" ? "default" : "outline"}
+                    onClick={() =>
+                      setStatusFilter((prev) => (prev === "completed" ? "all" : "completed"))
+                    }
+                    className={
+                      statusFilter === "completed"
+                        ? "border-emerald-300 bg-emerald-100 text-emerald-700 shadow-[0_0_8px_rgba(34,197,94,0.45)] hover:bg-emerald-200"
+                        : "border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50"
+                    }
+                  >
+                    Completed
+                  </Button>
+                  <Button
+                    variant={statusFilter === "missingPo" ? "default" : "outline"}
+                    onClick={() =>
+                      setStatusFilter((prev) => (prev === "missingPo" ? "all" : "missingPo"))
+                    }
+                    className={
+                      statusFilter === "missingPo"
+                        ? "border-rose-300 bg-rose-100 text-rose-700 shadow-[0_0_8px_rgba(244,63,94,0.45)] hover:bg-rose-200"
+                        : "border-rose-200 text-rose-700 hover:border-rose-300 hover:bg-rose-50"
+                    }
+                  >
+                    Missing PO
+                  </Button>
+                </div>
               </div>
             </div>
-
-            <div className="rounded-xl border p-4">
-              <div className="mb-3 text-sm font-semibold">Dealer Missing Delivery Doc &gt;7 Days (%)</div>
-              <div className="flex min-h-[140px] items-end gap-3 overflow-x-auto">
-                {dealerRiskData.map((bar) => (
-                  <button key={bar.dealer} className={`flex min-w-[52px] flex-col items-center gap-1 ${selectedDealerRisk === bar.dealer ? "opacity-100" : "opacity-80"}`} onClick={() => setSelectedDealerRisk((prev) => (prev === bar.dealer ? "all" : bar.dealer))}>
-                    <div className="w-5 rounded bg-rose-500" style={{ height: `${bar.height}px` }} title={`${bar.dealer}: ${bar.percentage.toFixed(1)}%`} />
-                    <span className="max-w-[72px] truncate text-[10px]">{bar.dealer}</span>
-                  </button>
-                ))}
+            <div className="rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-semibold text-slate-600">PGI Date Activity</div>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                      Total: {selectedMonthCount}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {selectedMonth === "all"
+                      ? "Daily counts by PGI date"
+                      : `Daily counts in ${formatMonthLabel(selectedMonth)}`}
+                  </div>
+                </div>
+                <label className="flex flex-col gap-2 text-xs font-medium text-slate-500">
+                  Month
+                  <select
+                    className="h-10 w-[220px] rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={selectedMonth}
+                    onChange={(event) => setSelectedMonth(event.target.value)}
+                    disabled={monthOptions.length === 0}
+                  >
+                    <option value="all">All months</option>
+                    {monthOptions.map((month) => (
+                      <option key={month} value={month}>
+                        {formatMonthLabel(month)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
+              {selectedMonth === "all" || chartData.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No PGI date data for chart.</div>
+              ) : (
+                <div className="flex items-end gap-2 overflow-x-auto pb-1">
+                  {chartData.map((bar) => (
+                    <div key={bar.day} className="flex flex-col items-center gap-2">
+                      <div
+                        className="w-3 rounded-full bg-gradient-to-t from-blue-500 to-sky-300 shadow-[0_4px_10px_rgba(59,130,246,0.35)]"
+                        style={{ height: `${bar.height}px` }}
+                        title={`Day ${bar.day}: ${bar.count}`}
+                      />
+                      <span className="text-[10px] text-slate-400">{bar.day}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => {
-                const next: Record<string, boolean> = {};
-                displayedRecords.forEach((r) => { next[`${r.chassisNumber}-${r.entryId || "root"}`] = true; });
-                setSelectedRows(next);
-              }}>Select all</Button>
-              <Button size="sm" variant="outline" onClick={() => setSelectedRows({})}>Clear</Button>
-              <select className="h-9 rounded-md border px-2" value={recipientType} onChange={(e) => setRecipientType(e.target.value as RecipientType)}>
-                <option value="dealer">Send to Dealer</option>
-                <option value="vendor">Send to Vendor</option>
-              </select>
-              <Button size="sm" onClick={sendBulk}>Send selected</Button>
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+            <div className="text-sm text-slate-500">
+              Showing {sortedRecords.length} PGI record{sortedRecords.length === 1 ? "" : "s"}
             </div>
-            <Button size="sm" variant="outline" onClick={() => setShowTemplateEditor((prev) => !prev)}>
-              {showTemplateEditor ? "Close template editor" : "Edit email template"}
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              Download table CSV
             </Button>
           </div>
-
-          {showTemplateEditor && (
-            <div className="rounded-lg border p-4 space-y-3">
-              <div className="text-sm font-semibold">PGI Missing Doc Email Template</div>
-              <div className="text-sm font-medium">Subject</div>
-              <Input value={templateSubject} onChange={(e) => setTemplateSubject(e.target.value)} />
-              <div className="text-sm font-medium">Body (must include placeholders)</div>
-              <Textarea rows={12} value={templateBody} onChange={(e) => setTemplateBody(e.target.value)} />
-              <div className="text-xs text-slate-500">Use placeholders: {"{{chassis_number}}"}, {"{{pgi_date}}"}, {"{{vendor_name}}"}</div>
-              <Button onClick={async () => {
-                if (!templateBody.includes("{{chassis_number}}") || !templateBody.includes("{{pgi_date}}") || !templateBody.includes("{{vendor_name}}")) {
-                  toast.error("Template must include Chassis Number, PGI Date and Vendor Name placeholders");
-                  return;
-                }
-                await handleSavePgiEmailTemplate({ subject: templateSubject, body: templateBody });
-                toast.success("Template saved to Firebase");
-              }}>Save template</Button>
-            </div>
-          )}
-
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10" />
-                <TableHead>Chassis</TableHead>
-                <TableHead>Dealer</TableHead>
-                <TableHead>PGI Date</TableHead>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Delivery Doc</TableHead>
-                <TableHead className="w-16">Email</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayedRecords.map((row) => {
-                const key = `${row.chassisNumber}-${row.entryId || "root"}`;
-                const docs = docsByChassis.get(row.chassisNumber) || [];
-                const missing = isMissingDeliveryAfter7Days(row, docsByChassis);
-                return (
-                  <TableRow key={key} className={missing ? "bg-rose-50/70" : ""}>
-                    <TableCell>
-                      <input type="checkbox" checked={Boolean(selectedRows[key])} onChange={(event) => setSelectedRows((prev) => ({ ...prev, [key]: event.target.checked }))} />
-                    </TableCell>
-                    <TableCell>{row.chassisNumber}</TableCell>
-                    <TableCell>{row.dealer || "-"}</TableCell>
-                    <TableCell>{row.pgidate || "-"}</TableCell>
-                    <TableCell>{row.vendorName || "-"}</TableCell>
-                    <TableCell>{docs.length ? docs.map((d) => d.name).join(", ") : "Missing"}</TableCell>
-                    <TableCell>
-                      {missing && (
-                        <Button size="icon" variant="ghost" onClick={() => void sendOne(row)}>
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      )}
+          <div className="overflow-x-auto">
+            <Table className="min-w-full border-separate border-spacing-y-2">
+              <TableHeader>
+                <TableRow className="rounded-lg bg-slate-50 shadow-sm">
+                  <TableHead className="rounded-l-lg">Chassis Number</TableHead>
+                  <TableHead>Dealer</TableHead>
+                  <TableHead>PGI Date</TableHead>
+                  <TableHead>PO Number</TableHead>
+                  <TableHead>Vendor Name</TableHead>
+                  <TableHead className="text-right">PO Price</TableHead>
+                  <TableHead>GR Status</TableHead>
+                  <TableHead>GR Date</TableHead>
+                  <TableHead className="rounded-r-lg">Delivery Doc</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedRecords.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-sm text-muted-foreground">
+                      No PGI records found for the current filters.
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                ) : (
+                  sortedRecords.map((record) => {
+                    const docs = docsByChassis.get(record.chassisNumber) || [];
+                    const status = getChassisStatus(record);
+                    return (
+                      <TableRow
+                        key={`${record.chassisNumber}-${record.entryId ?? "root"}`}
+                        className="rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        <TableCell className="rounded-l-lg font-medium">
+                          <div className="flex items-center gap-2">
+                            <span>{record.chassisNumber || "-"}</span>
+                            {status === "inTransit" && (
+                              <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 shadow-[0_0_8px_rgba(251,191,36,0.65)]">
+                                In transit
+                              </span>
+                            )}
+                            {status === "completed" && (
+                              <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 shadow-[0_0_8px_rgba(34,197,94,0.55)]">
+                                Completed
+                              </span>
+                            )}
+                            {status === "missingPo" && (
+                              <span className="rounded-full border border-rose-300 bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700 shadow-[0_0_8px_rgba(244,63,94,0.55)]">
+                                Missing PO
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{record.dealer || "-"}</TableCell>
+                        <TableCell>{record.pgidate || "-"}</TableCell>
+                        <TableCell>{record.poNumber || "-"}</TableCell>
+                        <TableCell>{record.vendorName || "-"}</TableCell>
+                        <TableCell className="text-right">{formatPrice(record.poPrice)}</TableCell>
+                        <TableCell>{record.grStatus || "-"}</TableCell>
+                        <TableCell>{record.grDateLast || "-"}</TableCell>
+                        <TableCell className="rounded-r-lg">
+                          {docs.length > 0 ? (
+                            <div className="flex flex-col gap-2">
+                              {docs.map((doc) => (
+                                <Button
+                                  key={doc.fullPath}
+                                  variant="outline"
+                                  size="sm"
+                                  asChild
+                                  className="justify-start"
+                                >
+                                  <a href={doc.url} target="_blank" rel="noreferrer">
+                                    {doc.name}
+                                  </a>
+                                </Button>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              {isLoadingDocs ? "Loading..." : "No file"}
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
