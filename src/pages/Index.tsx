@@ -22,13 +22,6 @@ import {
   fetchTransportPreferences,
   subscribeTransportPreferences,
   saveTransportPreferences,
-  fetchDealerEmails,
-  subscribeDealerEmails,
-  saveDealerEmail,
-  removeDealerEmail,
-  fetchPgiEmailTemplate,
-  subscribePgiEmailTemplate,
-  savePgiEmailTemplate,
   getStatusCheckCategory,
   patchDispatchingNote,
   deleteDispatchingNote,
@@ -44,8 +37,6 @@ import {
   TransportCompany,
   TransportConfig,
   TransportPreferenceData,
-  DealerEmailDirectory,
-  PgiEmailTemplate,
 } from "@/types";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -67,8 +58,6 @@ interface DashboardContextValue {
   refreshing: boolean;
   transportCompanies: TransportConfig;
   transportPreferences: TransportPreferenceData;
-  dealerEmails: DealerEmailDirectory;
-  pgiEmailTemplate: PgiEmailTemplate | null;
   deliveryToAssignments: DeliveryToAssignments;
   handleSaveDispatchingNote: (
     chassisNo: string,
@@ -82,9 +71,6 @@ interface DashboardContextValue {
   ) => Promise<void>;
   handleDeleteTransportCompany: (companyId: string) => Promise<void>;
   handleSaveTransportPreferences: (data: TransportPreferenceData) => Promise<void>;
-  handleSaveDealerEmail: (dealerName: string, email: string) => Promise<void>;
-  handleDeleteDealerEmail: (dealerName: string) => Promise<void>;
-  handleSavePgiEmailTemplate: (data: Pick<PgiEmailTemplate, "subject" | "body">) => Promise<void>;
   sidebarFilter: SidebarFilter | null;
   setSidebarFilter: (filter: SidebarFilter | null) => void;
 }
@@ -112,8 +98,6 @@ const IndexPage: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [transportCompanies, setTransportCompanies] = useState<TransportConfig>({});
   const [transportPreferences, setTransportPreferences] = useState<TransportPreferenceData>({});
-  const [dealerEmails, setDealerEmails] = useState<DealerEmailDirectory>({});
-  const [pgiEmailTemplate, setPgiEmailTemplate] = useState<PgiEmailTemplate | null>(null);
   const [sidebarFilter, setSidebarFilter] = useState<SidebarFilter | null>(null);
 
   const navigate = useNavigate();
@@ -209,7 +193,7 @@ const IndexPage: React.FC = () => {
   const handleRefreshData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [d, r, s, n, deliveryAssignments, t, p, dealerEmailData, pgiTemplate] = await Promise.all([
+      const [d, r, s, n, deliveryAssignments, t, p] = await Promise.all([
         fetchDispatchData(),
         fetchReallocationData(),
         fetchScheduleData(),
@@ -217,8 +201,6 @@ const IndexPage: React.FC = () => {
         fetchDeliveryToAssignments(),
         fetchTransportCompanies(),
         fetchTransportPreferences(),
-        fetchDealerEmails(),
-        fetchPgiEmailTemplate(),
       ]);
       setDispatchRaw(d || {});
       setReallocRaw(r || {});
@@ -227,8 +209,6 @@ const IndexPage: React.FC = () => {
       setDeliveryToAssignments(deliveryAssignments || {});
       setTransportCompanies(t || {});
       setTransportPreferences(p || {});
-      setDealerEmails(dealerEmailData || {});
-      setPgiEmailTemplate(pgiTemplate || null);
     } finally {
       setRefreshing(false);
     }
@@ -241,8 +221,6 @@ const IndexPage: React.FC = () => {
     let unsubDeliveryAssignments: (() => void) | null = null;
     let unsubTransport: (() => void) | null = null;
     let unsubTransportPreferences: (() => void) | null = null;
-    let unsubDealerEmails: (() => void) | null = null;
-    let unsubPgiEmailTemplate: (() => void) | null = null;
 
     const initialLoad = async () => {
       setLoading(true);
@@ -262,8 +240,6 @@ const IndexPage: React.FC = () => {
     unsubTransportPreferences = subscribeTransportPreferences((p) =>
       setTransportPreferences(p || {})
     );
-    unsubDealerEmails = subscribeDealerEmails((data) => setDealerEmails(data || {}));
-    unsubPgiEmailTemplate = subscribePgiEmailTemplate((data) => setPgiEmailTemplate(data || null));
 
     return () => {
       unsubDispatch && unsubDispatch();
@@ -272,8 +248,6 @@ const IndexPage: React.FC = () => {
       unsubDeliveryAssignments && unsubDeliveryAssignments();
       unsubTransport && unsubTransport();
       unsubTransportPreferences && unsubTransportPreferences();
-      unsubDealerEmails && unsubDealerEmails();
-      unsubPgiEmailTemplate && unsubPgiEmailTemplate();
     };
   }, [handleRefreshData]);
 
@@ -337,33 +311,6 @@ const IndexPage: React.FC = () => {
     setTransportPreferences(data);
   };
 
-
-  const handleSaveDealerEmail = async (dealerName: string, email: string) => {
-    const cleanDealer = dealerName.trim();
-    const cleanEmail = email.trim();
-    if (!cleanDealer || !cleanEmail) return;
-    await saveDealerEmail(cleanDealer, cleanEmail);
-    setDealerEmails((prev) => ({ ...prev, [cleanDealer]: cleanEmail }));
-  };
-
-  const handleDeleteDealerEmail = async (dealerName: string) => {
-    const cleanDealer = dealerName.trim();
-    if (!cleanDealer) return;
-    await removeDealerEmail(cleanDealer);
-    setDealerEmails((prev) => {
-      const next = { ...prev };
-      delete next[cleanDealer];
-      return next;
-    });
-  };
-
-  const handleSavePgiEmailTemplate = async (
-    data: Pick<PgiEmailTemplate, "subject" | "body">
-  ) => {
-    await savePgiEmailTemplate(data);
-    setPgiEmailTemplate({ ...data, updatedAt: new Date().toISOString() });
-  };
-
   const handleSelectGRRange = (range: SidebarFilter | null) => {
     setSidebarFilter(range);
     navigate("/dispatch");
@@ -389,8 +336,6 @@ const IndexPage: React.FC = () => {
     refreshing,
     transportCompanies,
     transportPreferences,
-    dealerEmails,
-    pgiEmailTemplate,
     deliveryToAssignments,
     handleSaveDispatchingNote,
     handleDeleteDispatchingNote,
@@ -398,9 +343,6 @@ const IndexPage: React.FC = () => {
     handleSaveTransportCompany,
     handleDeleteTransportCompany,
     handleSaveTransportPreferences,
-    handleSaveDealerEmail,
-    handleDeleteDealerEmail,
-    handleSavePgiEmailTemplate,
     sidebarFilter,
     setSidebarFilter,
   };
