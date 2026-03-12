@@ -6,6 +6,7 @@ const EMAILJS_CONFIG = {
   publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string | undefined,
   reportTemplateId: 'template_99eg2eg',
   transportTemplateId: 'template_ihncrv9',
+  pgiMissingTemplateId: 'template_ozd7hbo',
 };
 
 export interface EmailData {
@@ -50,6 +51,18 @@ export interface TransportEmailData {
   transportCompany?: string | null;
   previousCompany?: string | null;
   actionType: 'new' | 'change';
+}
+
+
+export interface PgiMissingEmailData {
+  to_email: string;
+  to_name: string;
+  subject: string;
+  message: string;
+  chassis_number: string;
+  pgi_date: string;
+  vendor_name: string;
+  dealer_name: string;
 }
 
 interface TransportTemplateParams {
@@ -140,7 +153,7 @@ const readErrorMessage = async (response: Response) => {
 };
 
 const sendEmailRequest = async (
-  templateParams: EmailTemplateParams | TransportTemplateParams,
+  templateParams: Record<string, unknown>,
   templateId: string
 ): Promise<void> => {
   const response = await fetch(EMAILJS_ENDPOINT, {
@@ -172,6 +185,11 @@ export const sendTransportUpdateEmail = async (data: TransportEmailData): Promis
   const templateParams = buildTransportTemplateParams(data);
   console.log('Sending transport email with params:', templateParams);
   await sendEmailRequest(templateParams, EMAILJS_CONFIG.transportTemplateId);
+};
+
+
+export const sendPgiMissingEmail = async (data: PgiMissingEmailData): Promise<void> => {
+  await sendEmailRequest(data, EMAILJS_CONFIG.pgiMissingTemplateId);
 };
 
 export const testEmailConnection = async (): Promise<void> => {
