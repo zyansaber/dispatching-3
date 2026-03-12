@@ -161,7 +161,6 @@ export type DeliveryToAssignments = Record<string, DeliveryToAssignment>;
 export interface TransportCompany {
   name: string;
   dealers?: string[];
-  email?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -187,14 +186,6 @@ export interface TransportPreferenceEntry {
 }
 
 export type TransportPreferenceData = Record<string, TransportPreferenceEntry>;
-
-export type DealerEmailDirectory = Record<string, string>;
-
-export interface PgiEmailTemplate {
-  subject: string;
-  body: string;
-  updatedAt?: string;
-}
 
 /** ----------------------------
  *  Transport Damage Claims
