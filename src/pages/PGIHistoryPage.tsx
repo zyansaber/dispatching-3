@@ -3,12 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { subscribePgiRecords, storage } from "@/lib/firebase";
-import { sendPgiMissingEmail } from "@/lib/emailjs";
 import type { PgiRecordData, PgiRecordEntry } from "@/types";
 import { getDownloadURL, listAll, ref as storageRef } from "firebase/storage";
-import { Mail } from "lucide-react";
-import { toast } from "sonner";
-import { useDashboardContext } from "./Index";
 
 type PgiHistoryRow = PgiRecordEntry & {
   chassisNumber: string;
@@ -120,26 +116,7 @@ const csvEscape = (value: string) => {
   return value;
 };
 
-
-const isMissingDeliveryDocAfter7Days = (
-  record: PgiHistoryRow,
-  docsByChassis: Map<string, DeliveryDoc[]>
-) => {
-  const pgiDate = parsePgiDate(record.pgidate ? String(record.pgidate) : "");
-  if (!pgiDate) return false;
-  const ageDays = (Date.now() - pgiDate.getTime()) / (1000 * 60 * 60 * 24);
-  if (ageDays < 7) return false;
-  const docs = docsByChassis.get(record.chassisNumber) || [];
-  return docs.length === 0;
-};
-
 const PGIHistoryPage: React.FC = () => {
-  const {
-    transportCompanies,
-    dealerEmails,
-    pgiEmailTemplate,
-    handleSavePgiEmailTemplate,
-  } = useDashboardContext();
   const [records, setRecords] = useState<PgiHistoryRow[]>([]);
   const [deliveryDocs, setDeliveryDocs] = useState<DeliveryDoc[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState<boolean>(true);
@@ -156,18 +133,6 @@ const PGIHistoryPage: React.FC = () => {
   const [customEnd, setCustomEnd] = useState<string>(() =>
     formatDateInput(new Date())
   );
-  const [selectedDealerRisk, setSelectedDealerRisk] = useState<string>("all");
-  const [multipleEmailMode, setMultipleEmailMode] = useState<boolean>(false);
-  const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({});
-  const [recipientType, setRecipientType] = useState<"dealer" | "vendor">("dealer");
-  const [showTemplateEditor, setShowTemplateEditor] = useState<boolean>(false);
-  const [templateSubject, setTemplateSubject] = useState<string>(
-    pgiEmailTemplate?.subject || "Missing Delivery Document Follow-up"
-  );
-  const [templateBody, setTemplateBody] = useState<string>(
-    pgiEmailTemplate?.body ||
-      "Dear Team,\n\nThe following chassis is still missing Delivery Doc for more than 7 days after PGI.\n\nChassis Number: {{chassis_number}}\nPGI Date: {{pgi_date}}\nVendor Name: {{vendor_name}}\n\nPlease action urgently."
-  );
 
   useEffect(() => {
     const unsubscribe = subscribePgiRecords((data: PgiRecordData) => {
@@ -177,12 +142,6 @@ const PGIHistoryPage: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (!pgiEmailTemplate) return;
-    setTemplateSubject(pgiEmailTemplate.subject || "Missing Delivery Document Follow-up");
-    setTemplateBody(pgiEmailTemplate.body || "");
-  }, [pgiEmailTemplate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -396,111 +355,6 @@ const PGIHistoryPage: React.FC = () => {
     return map;
   }, [deliveryDocs, sortedRecords]);
 
-  const dealerRiskData = useMemo(() => {
-    const grouped = new Map<string, { total: number; missing: number }>();
-    sortedRecords.forEach((record) => {
-      const dealer = (record.dealer ? String(record.dealer).trim() : "") || "Unknown";
-      const current = grouped.get(dealer) || { total: 0, missing: 0 };
-      current.total += 1;
-      if (isMissingDeliveryDocAfter7Days(record, docsByChassis)) {
-        current.missing += 1;
-      }
-      grouped.set(dealer, current);
-    });
-
-    const rows = Array.from(grouped.entries())
-      .map(([dealer, value]) => ({
-        dealer,
-        total: value.total,
-        missing: value.missing,
-      }))
-      .filter((row) => row.missing > 0);
-
-    const maxMissing = Math.max(...rows.map((row) => row.missing), 1);
-    return rows
-      .sort((a, b) => b.missing - a.missing)
-      .map((row) => ({ ...row, height: Math.max((row.missing / maxMissing) * 100, 8) }));
-  }, [docsByChassis, sortedRecords]);
-
-  const displayedRecords = useMemo(() => {
-    if (selectedDealerRisk === "all") return sortedRecords;
-    return sortedRecords.filter((record) => {
-      const dealer = (record.dealer ? String(record.dealer).trim() : "") || "Unknown";
-      return dealer === selectedDealerRisk && isMissingDeliveryDocAfter7Days(record, docsByChassis);
-    });
-  }, [docsByChassis, selectedDealerRisk, sortedRecords]);
-
-  const selectedCount = useMemo(
-    () => Object.values(selectedRows).filter(Boolean).length,
-    [selectedRows]
-  );
-
-  const vendorEmailMap = useMemo(() => {
-    const map = new Map<string, string>();
-    Object.values(transportCompanies || {}).forEach((company) => {
-      const name = company.name?.trim().toLowerCase();
-      const email = company.email?.trim();
-      if (name && email) {
-        map.set(name, email);
-      }
-    });
-    return map;
-  }, [transportCompanies]);
-
-  const resolveEmail = (record: PgiHistoryRow) => {
-    if (recipientType === "dealer") {
-      const dealer = record.dealer ? String(record.dealer).trim() : "";
-      return dealerEmails[dealer] || "";
-    }
-    const vendor = record.vendorName ? String(record.vendorName).trim().toLowerCase() : "";
-    return vendorEmailMap.get(vendor) || "";
-  };
-
-  const renderTemplateMessage = (record: PgiHistoryRow) =>
-    templateBody
-      .replaceAll("{{chassis_number}}", record.chassisNumber || "")
-      .replaceAll("{{pgi_date}}", String(record.pgidate || ""))
-      .replaceAll("{{vendor_name}}", String(record.vendorName || ""));
-
-  const sendSingleEmail = async (record: PgiHistoryRow) => {
-    const toEmail = resolveEmail(record);
-    if (!toEmail) {
-      toast.error(`No ${recipientType} email found for this row.`);
-      return;
-    }
-
-    await sendPgiMissingEmail({
-      to_email: toEmail,
-      to_name:
-        recipientType === "dealer"
-          ? String(record.dealer || "Dealer")
-          : String(record.vendorName || "Vendor"),
-      subject: templateSubject,
-      message: renderTemplateMessage(record),
-      chassis_number: record.chassisNumber || "",
-      pgi_date: String(record.pgidate || ""),
-      vendor_name: String(record.vendorName || ""),
-      dealer_name: String(record.dealer || ""),
-    });
-
-    toast.success(`Email sent to ${toEmail}`);
-  };
-
-  const handleSendSelected = async () => {
-    const selectedEntries = displayedRecords.filter(
-      (record) => selectedRows[`${record.chassisNumber}-${record.entryId ?? "root"}`]
-    );
-    if (!selectedEntries.length) {
-      toast.error("Please select at least one row.");
-      return;
-    }
-
-    for (const record of selectedEntries) {
-      // eslint-disable-next-line no-await-in-loop
-      await sendSingleEmail(record);
-    }
-  };
-
   const handleDownload = () => {
     if (sortedRecords.length === 0) return;
     const headers = [
@@ -514,7 +368,7 @@ const PGIHistoryPage: React.FC = () => {
       "GR Date",
       "Delivery Doc",
     ];
-    const rows = displayedRecords.map((record) => {
+    const rows = sortedRecords.map((record) => {
       const docs = docsByChassis.get(record.chassisNumber) || [];
       return [
         record.chassisNumber || "",
@@ -751,6 +605,19 @@ const PGIHistoryPage: React.FC = () => {
             </div>
             <div className="rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur">
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-semibold text-slate-600">PGI Date Activity</div>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                      Total: {selectedMonthCount}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {selectedMonth === "all"
+                      ? "Daily counts by PGI date"
+                      : `Daily counts in ${formatMonthLabel(selectedMonth)}`}
+                  </div>
+                </div>
                 <label className="flex flex-col gap-2 text-xs font-medium text-slate-500">
                   Month
                   <select
@@ -767,193 +634,38 @@ const PGIHistoryPage: React.FC = () => {
                     ))}
                   </select>
                 </label>
-                <div className="text-xs text-slate-500">
-                  Click dealer bar to filter missing Delivery Doc rows ({">7 days"}).
-                </div>
               </div>
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 pb-2">
-                    <div className="text-sm font-semibold text-slate-600">PGI Date Activity</div>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                      Total: {selectedMonthCount}
-                    </span>
-                  </div>
-                  <div className="pb-3 text-xs text-slate-400">
-                    {selectedMonth === "all"
-                      ? "Daily counts by PGI date"
-                      : `Daily counts in ${formatMonthLabel(selectedMonth)}`}
-                  </div>
-                  {selectedMonth === "all" || chartData.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No PGI date data for chart.</div>
-                  ) : (
-                    <div className="flex items-end gap-2 overflow-x-auto pb-1">
-                      {chartData.map((bar) => (
-                        <div key={bar.day} className="flex flex-col items-center gap-2">
-                          <div
-                            className="w-3 rounded-full bg-gradient-to-t from-blue-500 to-sky-300 shadow-[0_4px_10px_rgba(59,130,246,0.35)]"
-                            style={{ height: `${bar.height}px` }}
-                            title={`Day ${bar.day}: ${bar.count}`}
-                          />
-                          <span className="text-[10px] text-slate-400">{bar.day}</span>
-                        </div>
-                      ))}
+              {selectedMonth === "all" || chartData.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No PGI date data for chart.</div>
+              ) : (
+                <div className="flex items-end gap-2 overflow-x-auto pb-1">
+                  {chartData.map((bar) => (
+                    <div key={bar.day} className="flex flex-col items-center gap-2">
+                      <div
+                        className="w-3 rounded-full bg-gradient-to-t from-blue-500 to-sky-300 shadow-[0_4px_10px_rgba(59,130,246,0.35)]"
+                        style={{ height: `${bar.height}px` }}
+                        title={`Day ${bar.day}: ${bar.count}`}
+                      />
+                      <span className="text-[10px] text-slate-400">{bar.day}</span>
                     </div>
-                  )}
+                  ))}
                 </div>
-
-                <div>
-                  <div className="flex items-center justify-between gap-2 pb-2">
-                    <div className="text-sm font-semibold text-slate-600">
-                      Dealer Missing Delivery Doc &gt;7 Days (Count)
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedDealerRisk("all")}
-                      disabled={selectedDealerRisk === "all"}
-                    >
-                      Clear filter
-                    </Button>
-                  </div>
-                  {dealerRiskData.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No dealer risk data for current filters.</div>
-                  ) : (
-                    <div className="flex items-end gap-3 overflow-x-auto pb-1">
-                      {dealerRiskData.map((bar) => (
-                        <button
-                          key={bar.dealer}
-                          type="button"
-                          onClick={() =>
-                            setSelectedDealerRisk((prev) =>
-                              prev === bar.dealer ? "all" : bar.dealer
-                            )
-                          }
-                          className="flex min-w-[58px] flex-col items-center gap-2"
-                        >
-                          <div
-                            className={`w-5 rounded-t-md ${
-                              selectedDealerRisk === bar.dealer ? "bg-rose-600" : "bg-rose-400"
-                            }`}
-                            style={{ height: `${bar.height}px` }}
-                            title={`${bar.dealer}: ${bar.missing}`}
-                          />
-                          <div className="text-xs font-semibold text-slate-700">{bar.missing}</div>
-                          <span className="max-w-[88px] truncate text-xs text-slate-600">{bar.dealer}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
             <div className="text-sm text-slate-500">
-              Showing {displayedRecords.length} PGI record{displayedRecords.length === 1 ? "" : "s"}
-              {selectedDealerRisk !== "all" && ` (filtered: ${selectedDealerRisk})`}
+              Showing {sortedRecords.length} PGI record{sortedRecords.length === 1 ? "" : "s"}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleDownload}>
-                Download table CSV
-              </Button>
-              <Button
-                variant={multipleEmailMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setMultipleEmailMode((prev) => !prev);
-                  setSelectedRows({});
-                }}
-              >
-                {multipleEmailMode ? "Cancel Multiple Email" : "Multiple Email"}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowTemplateEditor((prev) => !prev)}
-              >
-                {showTemplateEditor ? "Hide Template" : "Edit Template"}
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              Download table CSV
+            </Button>
           </div>
-          {multipleEmailMode && (
-            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const next: Record<string, boolean> = {};
-                  displayedRecords.forEach((record) => {
-                    if (!isMissingDeliveryDocAfter7Days(record, docsByChassis)) return;
-                    next[`${record.chassisNumber}-${record.entryId ?? "root"}`] = true;
-                  });
-                  setSelectedRows(next);
-                }}
-              >
-                Select all
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setSelectedRows({})}>
-                Clear
-              </Button>
-              <select
-                className="h-9 rounded-md border border-input bg-white px-3 text-sm"
-                value={recipientType}
-                onChange={(event) => setRecipientType(event.target.value as "dealer" | "vendor")}
-              >
-                <option value="dealer">Send to Dealer</option>
-                <option value="vendor">Send to Vendor</option>
-              </select>
-              <Button size="sm" onClick={() => void handleSendSelected()}>
-                Send selected ({selectedCount})
-              </Button>
-            </div>
-          )}
-          {showTemplateEditor && (
-            <div className="mb-3 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Email Template</div>
-              <input
-                className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-                placeholder="Subject"
-                value={templateSubject}
-                onChange={(event) => setTemplateSubject(event.target.value)}
-              />
-              <textarea
-                className="min-h-[160px] w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
-                value={templateBody}
-                onChange={(event) => setTemplateBody(event.target.value)}
-              />
-              <div className="text-xs text-slate-500">
-                Required placeholders: {"{{chassis_number}}"}, {"{{pgi_date}}"}, {"{{vendor_name}}"}
-              </div>
-              <Button
-                size="sm"
-                onClick={async () => {
-                  if (
-                    !templateBody.includes("{{chassis_number}}") ||
-                    !templateBody.includes("{{pgi_date}}") ||
-                    !templateBody.includes("{{vendor_name}}")
-                  ) {
-                    toast.error("Template must include chassis_number, pgi_date and vendor_name.");
-                    return;
-                  }
-                  await handleSavePgiEmailTemplate({
-                    subject: templateSubject,
-                    body: templateBody,
-                  });
-                  toast.success("Template saved.");
-                }}
-              >
-                Save template
-              </Button>
-            </div>
-          )}
           <div className="overflow-x-auto">
             <Table className="min-w-full border-separate border-spacing-y-2">
               <TableHeader>
                 <TableRow className="rounded-lg bg-slate-50 shadow-sm">
-                  {multipleEmailMode && <TableHead className="rounded-l-lg w-10">Select</TableHead>}
-                  <TableHead className={multipleEmailMode ? "" : "rounded-l-lg"}>Chassis Number</TableHead>
+                  <TableHead className="rounded-l-lg">Chassis Number</TableHead>
                   <TableHead>Dealer</TableHead>
                   <TableHead>PGI Date</TableHead>
                   <TableHead>PO Number</TableHead>
@@ -961,42 +673,26 @@ const PGIHistoryPage: React.FC = () => {
                   <TableHead className="text-right">PO Price</TableHead>
                   <TableHead>GR Status</TableHead>
                   <TableHead>GR Date</TableHead>
-                  <TableHead>Delivery Doc</TableHead>
-                  <TableHead className="rounded-r-lg w-16">Email</TableHead>
+                  <TableHead className="rounded-r-lg">Delivery Doc</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedRecords.length === 0 ? (
+                {sortedRecords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={multipleEmailMode ? 11 : 10} className="text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-sm text-muted-foreground">
                       No PGI records found for the current filters.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayedRecords.map((record) => {
+                  sortedRecords.map((record) => {
                     const docs = docsByChassis.get(record.chassisNumber) || [];
                     const status = getChassisStatus(record);
-                    const rowKey = `${record.chassisNumber}-${record.entryId ?? "root"}`;
-                    const missingAfter7Days = isMissingDeliveryDocAfter7Days(record, docsByChassis);
                     return (
                       <TableRow
-                        key={rowKey}
-                        className={`rounded-lg border border-slate-200 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${missingAfter7Days ? "bg-rose-50" : "bg-white"}`}
+                        key={`${record.chassisNumber}-${record.entryId ?? "root"}`}
+                        className="rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                       >
-                        {multipleEmailMode && (
-                          <TableCell className="align-top">
-                            {missingAfter7Days ? (
-                              <input
-                                type="checkbox"
-                                checked={Boolean(selectedRows[rowKey])}
-                                onChange={(event) =>
-                                  setSelectedRows((prev) => ({ ...prev, [rowKey]: event.target.checked }))
-                                }
-                              />
-                            ) : null}
-                          </TableCell>
-                        )}
-                        <TableCell className={`${multipleEmailMode ? "" : "rounded-l-lg"} font-medium`}>
+                        <TableCell className="rounded-l-lg font-medium">
                           <div className="flex items-center gap-2">
                             <span>{record.chassisNumber || "-"}</span>
                             {status === "inTransit" && (
@@ -1014,11 +710,6 @@ const PGIHistoryPage: React.FC = () => {
                                 Missing PO
                               </span>
                             )}
-                            {missingAfter7Days && (
-                              <span className="rounded-full border border-red-300 bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-                                Missing Delivery Doc &gt;7d
-                              </span>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>{record.dealer || "-"}</TableCell>
@@ -1028,7 +719,7 @@ const PGIHistoryPage: React.FC = () => {
                         <TableCell className="text-right">{formatPrice(record.poPrice)}</TableCell>
                         <TableCell>{record.grStatus || "-"}</TableCell>
                         <TableCell>{record.grDateLast || "-"}</TableCell>
-                        <TableCell>
+                        <TableCell className="rounded-r-lg">
                           {docs.length > 0 ? (
                             <div className="flex flex-col gap-2">
                               {docs.map((doc) => (
@@ -1049,20 +740,6 @@ const PGIHistoryPage: React.FC = () => {
                             <span className="text-sm text-muted-foreground">
                               {isLoadingDocs ? "Loading..." : "No file"}
                             </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="rounded-r-lg">
-                          {missingAfter7Days ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => void sendSingleEmail(record)}
-                              aria-label={`Send email for ${record.chassisNumber}`}
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
                       </TableRow>
