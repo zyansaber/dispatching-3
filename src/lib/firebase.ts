@@ -33,8 +33,6 @@ import {
   DamageClaim,
   DamageClaimData,
   PgiRecordData,
-  DealerEmailDirectory,
-  PgiEmailTemplate,
 } from "@/types";
 
 // -------------------- Firebase 初始化 --------------------
@@ -87,18 +85,6 @@ export function transportPreferenceRef(dealerId?: string | null) {
   return dealerId
     ? ref(db, `transportPreferences/${escapeKey(dealerId)}`)
     : ref(db, "transportPreferences");
-}
-
-// /dealerEmails/<slug> 的引用
-export function dealerEmailRef(dealerId?: string | null) {
-  return dealerId
-    ? ref(db, `dealerEmails/${escapeKey(dealerId)}`)
-    : ref(db, "dealerEmails");
-}
-
-// /pgiEmailTemplate 的引用
-export function pgiEmailTemplateRef() {
-  return ref(db, "pgiEmailTemplate");
 }
 
 // 按底盘号进行“局部更新”
@@ -225,26 +211,6 @@ export const fetchTransportPreferences = async (): Promise<TransportPreferenceDa
   }
 };
 
-export const fetchDealerEmails = async (): Promise<DealerEmailDirectory> => {
-  try {
-    const snapshot = await get(dealerEmailRef());
-    return snapshot.val() || {};
-  } catch (error) {
-    console.error("Error fetching dealer emails:", error);
-    return {};
-  }
-};
-
-export const fetchPgiEmailTemplate = async (): Promise<PgiEmailTemplate | null> => {
-  try {
-    const snapshot = await get(pgiEmailTemplateRef());
-    return snapshot.val() || null;
-  } catch (error) {
-    console.error("Error fetching PGI email template:", error);
-    return null;
-  }
-};
-
 // -------------------- 实时订阅 --------------------
 export function subscribeDispatch(onChange: (data: DispatchData) => void) {
   const r = ref(db, "Dispatch");
@@ -307,18 +273,6 @@ export function subscribeTransportPreferences(
 export function subscribePgiRecords(onChange: (data: PgiRecordData) => void) {
   const r = ref(db, "pgirecord");
   const cb = onValue(r, (snap) => onChange((snap.val() || {}) as PgiRecordData));
-  return () => off(r, "value", cb);
-}
-
-export function subscribeDealerEmails(onChange: (data: DealerEmailDirectory) => void) {
-  const r = dealerEmailRef();
-  const cb = onValue(r, (snap) => onChange((snap.val() || {}) as DealerEmailDirectory));
-  return () => off(r, "value", cb);
-}
-
-export function subscribePgiEmailTemplate(onChange: (data: PgiEmailTemplate | null) => void) {
-  const r = pgiEmailTemplateRef();
-  const cb = onValue(r, (snap) => onChange((snap.val() || null) as PgiEmailTemplate | null));
   return () => off(r, "value", cb);
 }
 
@@ -400,23 +354,6 @@ export const saveTransportPreferences = async (
   data: TransportPreferenceData
 ): Promise<void> => {
   await set(transportPreferenceRef(), data);
-};
-
-export const saveDealerEmail = async (dealerName: string, email: string): Promise<void> => {
-  await set(dealerEmailRef(dealerName), email.trim());
-};
-
-export const removeDealerEmail = async (dealerName: string): Promise<void> => {
-  await remove(dealerEmailRef(dealerName));
-};
-
-export const savePgiEmailTemplate = async (
-  template: Pick<PgiEmailTemplate, "subject" | "body">
-): Promise<void> => {
-  await set(pgiEmailTemplateRef(), {
-    ...template,
-    updatedAt: new Date().toISOString(),
-  });
 };
 
 // -------------------- 业务辅助 --------------------
