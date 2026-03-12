@@ -13,8 +13,6 @@ import {
   Printer,
   Ticket,
   ShieldCheck,
-  FileWarning,
-  FileText,
   History,
   SlidersHorizontal,
   Truck,
@@ -31,13 +29,11 @@ export type WorkspaceNavItem = {
 const navItems: WorkspaceNavItem[] = [
   { to: "/stock", label: "Stock Sheet", icon: ClipboardList, end: true },
   { to: "/dispatch", label: "Dispatch Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/transport-damage", label: "Transport Damage", icon: FileWarning, end: true },
   { to: "/transport-preference", label: "Transport Preference", icon: SlidersHorizontal, end: true },
   { to: "/temporary-leaving-transport", label: "Temporary Leaving & Transport", icon: Truck, end: true },
   { to: "/pgi-history", label: "PGI History", icon: History, end: true },
   { to: "/service-ticket", label: "Service Ticket", icon: Ticket, end: true },
   { to: "/admin", label: "Admin", icon: ShieldCheck, end: true },
-  { to: "/workflow", label: "Workflow Guide", icon: FileText, end: true },
 ];
 
 interface WorkspaceSidebarProps {
