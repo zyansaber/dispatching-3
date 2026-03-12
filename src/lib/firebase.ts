@@ -329,11 +329,17 @@ export const upsertTransportCompany = async (
   const targetRef = companyId
     ? transportCompanyRef(companyId)
     : push(transportCompanyRef());
-  await update(targetRef, {
+
+  const payload: Record<string, unknown> = {
     ...data,
     updatedAt: new Date().toISOString(),
-    createdAt: companyId ? undefined : new Date().toISOString(),
-  });
+  };
+
+  if (!companyId) {
+    payload.createdAt = new Date().toISOString();
+  }
+
+  await update(targetRef, payload);
   return targetRef.key || "";
 };
 
